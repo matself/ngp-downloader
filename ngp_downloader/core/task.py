@@ -10,14 +10,14 @@ from qgis.PyQt.QtCore import pyqtSignal
 
 from ..config import PLUGIN_NAME
 from .client import NgpClient, NgpError
-from .export import geojson_to_gpkg, item_to_feature, write_geojson
+from .export import item_to_feature, write_geojson, write_gpkg
 
 PAGE_LIMIT = 1000  # API max is 10000; smaller pages give smoother progress.
 
 
 class DownloadTask(QgsTask):
     # Emitted in the main thread via QgsTask.finished → safe for UI work.
-    completed = pyqtSignal(str, str, int)  # gpkg path, layer name, feature count
+    completed = pyqtSignal(str, list, int)  # gpkg path, layer names, feature count
     failed = pyqtSignal(str)
 
     def __init__(
@@ -36,6 +36,7 @@ class DownloadTask(QgsTask):
         self.layer_name = layer_name
         self.gpkg_path = output_dir / f"{layer_name}.gpkg"
         self.feature_count = 0
+        self.layer_names: list[str] = []
         self.error: str | None = None
         self._feedback = QgsFeedback()
 
@@ -59,7 +60,7 @@ class DownloadTask(QgsTask):
                     self.setProgress(min(99.0, 100.0 * len(features) / matched))
                 self._log(f"{len(features)} objekt hämtade")
         except NgpError as e:
-            self.error = f"HTTP {e.status}: {e}" if e.status else str(e)
+            self.error = e.describe()
             return False
 
         if not features:
@@ -70,7 +71,7 @@ class DownloadTask(QgsTask):
             self.output_dir.mkdir(parents=True, exist_ok=True)
             geojson_path = self.output_dir / f"{self.layer_name}.geojson"
             write_geojson(features, geojson_path)
-            geojson_to_gpkg(geojson_path, self.gpkg_path, self.layer_name)
+            self.layer_names = write_gpkg(features, self.gpkg_path, self.layer_name)
         except Exception as e:  # noqa: BLE001 — report any write failure to the UI
             self.error = str(e)
             return False
@@ -80,7 +81,7 @@ class DownloadTask(QgsTask):
 
     def finished(self, result: bool) -> None:
         if result:
-            self.completed.emit(str(self.gpkg_path), self.layer_name, self.feature_count)
+            self.completed.emit(str(self.gpkg_path), self.layer_names, self.feature_count)
         elif not self.isCanceled():
             self._log(self.error or "Okänt fel", Qgis.MessageLevel.Critical)
             self.failed.emit(self.error or "Okänt fel")

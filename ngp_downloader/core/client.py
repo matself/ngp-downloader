@@ -21,6 +21,16 @@ class NgpError(Exception):
         super().__init__(message)
         self.status = status
 
+    def describe(self) -> str:
+        if self.status == 404:
+            # The gateway answers 404 for datasets not deployed in the chosen
+            # environment, e.g. Stompunkt while its specification is in test.
+            return (
+                "HTTP 404: datamängden finns inte i vald miljö. Den kan vara under test "
+                "hos Lantmäteriet och ännu inte publicerad i produktion."
+            )
+        return f"HTTP {self.status}: {self}" if self.status else str(self)
+
 
 class NgpClient:
     def __init__(self, base_url: str, authcfg: str, feedback: QgsFeedback | None = None):

@@ -219,7 +219,7 @@ class NgpDock(QDockWidget):
         try:
             collections = NgpClient(self._base_url(), authcfg).collections()
         except NgpError as e:
-            self._message(f"Kunde inte hämta delmängder (HTTP {e.status}): {e}", Qgis.MessageLevel.Critical)
+            self._message(f"Kunde inte hämta delmängder – {e.describe()}", Qgis.MessageLevel.Critical)
             return
         finally:
             QApplication.restoreOverrideCursor()
@@ -312,11 +312,12 @@ class NgpDock(QDockWidget):
         self._task = None
         self.download_btn.setEnabled(True)
 
-    def _on_completed(self, gpkg_path: str, layer_name: str, count: int) -> None:
-        uri = f"{gpkg_path}|layername={layer_name}"
-        layer = QgsVectorLayer(uri, layer_name, "ogr")
-        if layer.isValid():
-            QgsProject.instance().addMapLayer(layer)
+    def _on_completed(self, gpkg_path: str, layer_names: list, count: int) -> None:
+        for layer_name in layer_names:
+            uri = f"{gpkg_path}|layername={layer_name}"
+            layer = QgsVectorLayer(uri, layer_name, "ogr")
+            if layer.isValid():
+                QgsProject.instance().addMapLayer(layer)
         self._message(f"{count} objekt sparade i {gpkg_path}", Qgis.MessageLevel.Success)
 
     def _on_failed(self, error: str) -> None:
