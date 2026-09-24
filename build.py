@@ -17,6 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PLUGIN_DIR = "ngp_downloader"
+ICON_URL = "https://raw.githubusercontent.com/matself/ngp-downloader/main/ngp_downloader/icon.png"
 GITHUB_RELEASES = "https://github.com/matself/ngp-downloader/releases/download/v{version}"
 
 
@@ -56,6 +57,7 @@ def build_plugins_xml(meta: dict[str, str], zip_name: str, base_url: str) -> Pat
         "supports_qt6": meta.get("supportsqt6", "False"),
         "homepage": meta.get("homepage", ""),
         "file_name": zip_name,
+        "icon": ICON_URL,
         "author_name": meta.get("author", ""),
         "download_url": f"{base_url.rstrip('/')}/{zip_name}",
         "uploaded_by": meta.get("author", ""),

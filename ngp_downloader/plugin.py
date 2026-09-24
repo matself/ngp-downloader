@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from qgis.core import QgsApplication
+from pathlib import Path
+
 from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QIcon
 
 try:  # Qt6 / QGIS 4
     from qgis.PyQt.QtGui import QAction
@@ -18,9 +20,8 @@ class NgpDownloaderPlugin:
         self.dock = None
 
     def initGui(self) -> None:
-        self.action = QAction(
-            QgsApplication.getThemeIcon("/mActionAddOgrLayer.svg"), PLUGIN_NAME, self.iface.mainWindow()
-        )
+        icon = QIcon(str(Path(__file__).resolve().parent / "icon.svg"))
+        self.action = QAction(icon, PLUGIN_NAME, self.iface.mainWindow())
         self.action.setCheckable(True)
         self.action.toggled.connect(self._toggle_dock)
         self.iface.addWebToolBarIcon(self.action)

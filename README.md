@@ -29,6 +29,7 @@ Pluginet lagrar inga inloggningsuppgifter. Det sparar bara id:t för en konfigur
 
 ```
 ngp_downloader/
+  icon.svg / .png     pluginets ikon (PNG:en renderas från SVG:en)
   metadata.txt        plugin-metadata (QGIS 3.34 – 4.x, Qt6-kompatibel)
   config.py           miljöer, bas-URL:er
   datasets.json       register över datamängder, filter och asset-roller
@@ -83,7 +84,6 @@ För en intern källa, t.ex. en nätverksdisk: `python build.py --base-url file:
 - [ ] Hämtning av assets per roll (domänobjekt, beslutsdokument) via nedladdnings-API:et
 - [ ] Verifiera och fyll i filter för Detaljplan, Översiktsplan m.fl.
 - [ ] QML-stilar per datamängd
-- [ ] Ikon
 
 ## Licens
 
