@@ -37,6 +37,10 @@ Finns en stil i `styles/{datamängd}_{lager}.qml` läggs den på när lagret lä
 
 BFS 2020:6 anger färgerna som namn, inte värden. Paletten är modellerad på Lantmäteriets karta och finns i `tools/make_detaljplan_styles.py`, som bygger om QML-filerna (körs med QGIS Python).
 
+**Strandskydd** (`tools/make_other_styles.py`): som NGP:s egen WMS, med 70 % transparens – rosa med rosaröd kontur där strandskydd gäller (utvidgat, generellt inritat, infört), nästan vit med mörkgrå kontur för undantag, upphävanden och avvisat. En legend-post per strandskyddstyp. Observera att det generella strandskyddet (100 m från strandlinjen) i regel inte är inritat – att en plats saknar yta betyder inte att strandskydd saknas.
+
+**Kulturhistorisk lämning**: som i Fornsök – fornlämning som brandorange symbol med runan ᚱ och röda ytor (70 % transparens) och linjer, övrig kulturhistorisk lämning som petrolblå symbol med Φ och blå konturer, övriga statusar (möjlig fornlämning, uppgift om, före detta) grå med ◇. Ytor och linjer får symbolen i mitten. Lämningsnummer som etikett från 1:5000. Symbolerna är inbäddade SVG och kräver inget typsnitt.
+
 ### Resurser
 
 *Hämta resurser för aktivt lager…* laddar ner det som `assets` pekar på via NGP:s nedladdnings-API – domänobjekt och dokument som plankarta, planbeskrivning och beslut. Vilka roller som finns läses ur datat, så det fungerar för alla datamängder utan särskild kod.
@@ -116,7 +120,7 @@ För en intern källa, t.ex. en nätverksdisk: `python build.py --base-url file:
 ## Att göra
 
 - [ ] Verifiera och fyll i filter för Detaljplan, Översiktsplan m.fl.
-- [ ] QML-stilar för fler datamängder (finns för Detaljplan)
+- [ ] QML-stilar för fler datamängder (finns för Detaljplan, Strandskydd och Kulturhistorisk lämning)
 - [ ] Detaljplan: sekundär egenskapsgräns och övriga symbolbeteckningar (linjer, pilar m.m.)
 
 ## Licens

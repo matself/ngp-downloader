@@ -182,10 +182,13 @@ def label_settings(expression: str, size: float, max_scale: int, italic=False, b
     return QgsVectorLayerSimpleLabeling(s)
 
 
-def save(geometry: str, name: str, renderer, labeling=None) -> None:
-    fields = "&".join(f"field={f}:string" for f in (
-        "planbestammelse_etikett", "planbestammelse_farg", "planbestammelse_symbol", "detaljplan_beteckning",
-    ))
+DETALJPLAN_FIELDS = (
+    "planbestammelse_etikett", "planbestammelse_farg", "planbestammelse_symbol", "detaljplan_beteckning",
+)
+
+
+def save(geometry: str, name: str, renderer, labeling=None, field_names=DETALJPLAN_FIELDS) -> None:
+    fields = "&".join(f"field={f}:string" for f in field_names)
     layer = QgsVectorLayer(f"{geometry}?crs=EPSG:3006&{fields}", name, "memory")
     layer.setRenderer(renderer)
     if labeling:
