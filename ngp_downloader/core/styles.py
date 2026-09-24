@@ -20,9 +20,18 @@ CATEGORIES = QgsMapLayer.StyleCategory.Symbology | QgsMapLayer.StyleCategory.Lab
 
 
 def find_style(dataset_id: str, layer_suffix: str, geometry_type) -> Path | None:
+    """Most specific existing style: {dataset}_{suffix}, with or without a
+    geometry part (a type only gets one when it has several geometries), then
+    {dataset}_{geometry}."""
+    geom = SUFFIXES.get(geometry_type)
+    base = layer_suffix
+    if geom and base.endswith(f"_{geom}"):
+        base = base[: -len(geom) - 1]
     candidates = [f"{dataset_id}_{layer_suffix}" if layer_suffix else dataset_id]
-    if geometry_type in SUFFIXES:
-        candidates.append(f"{dataset_id}_{SUFFIXES[geometry_type]}")
+    if base and geom:
+        candidates += [f"{dataset_id}_{base}_{geom}", f"{dataset_id}_{base}"]
+    if geom:
+        candidates.append(f"{dataset_id}_{geom}")
     return next((STYLES_DIR / f"{c}.qml" for c in candidates if (STYLES_DIR / f"{c}.qml").exists()), None)
 
 

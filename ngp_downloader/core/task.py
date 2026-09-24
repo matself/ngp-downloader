@@ -92,7 +92,7 @@ class DownloadTask(QgsTask):
             before = len(features)
             features = merge_combinations(features)
             if len(features) < before:
-                self._log(f"Kombinationer av användningar sammanslagna: {before} → {len(features)} objekt")
+                self._log(f"Bestämmelser med samma yta sammanslagna: {before} → {len(features)} objekt")
 
         try:
             self.output_dir.mkdir(parents=True, exist_ok=True)

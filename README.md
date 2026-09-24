@@ -22,13 +22,20 @@ Referensobjekten är Lantmäteriets harmoniserade sökversion av domänobjekten 
 
 ### Beteckning och färg (Detaljplan)
 
-Planbestämmelser har en referens till Boverkets planbestämmelsekatalog. Pluginet hämtar katalogen från Boverkets öppna API (`api.boverket.se/planbestammelsekatalogen`), cachar den i QGIS-profilen i 30 dagar och lägger till kolumnerna `planbestammelse_beteckning` (t.ex. `B`, `GATA`, `e`) och `planbestammelse_farg` (t.ex. `Gul`) enligt Boverkets allmänna råd BFS 2020:6. Färgen anges som namn – varken Boverket eller katalogen anger färgvärden.
+Planbestämmelser har en referens till Boverkets planbestämmelsekatalog. Pluginet hämtar katalogen från Boverkets öppna API (`api.boverket.se/planbestammelsekatalogen`), cachar den i QGIS-profilen i 30 dagar och lägger till kolumnerna `planbestammelse_beteckning` (t.ex. `B`, `GATA`, `e`) och `planbestammelse_farg` (t.ex. `Gul`) `planbestammelse_symbol` (t.ex. `Prickmark (1949 - 2020)`) och `planbestammelse_etikett` – beteckningen, eller för höjdsymboler ett värde som `nh 9` (nockhöjd), `th 3`, `bh 7`, `27°` – enligt Boverkets allmänna råd BFS 2020:6. Färgen anges som namn – varken Boverket eller katalogen anger färgvärden.
 
 Källa: Boverket, Planbestämmelsekatalogen.
 
 ### Stilar
 
-Finns en stil i `styles/{datamängd}_{yta|linje|punkt}.qml` läggs den på när lagret läggs till, och sparas som standardstil i GeoPackage-filen så att filen öppnas med stil även utan pluginet. Detaljplan har stil för ytor (användning färgad per kategori i plankartans färgtradition, egenskapsgränser, plangräns) och linjer (t.ex. utfartsförbud). Färgerna är inte Boverkets officiella värden.
+Finns en stil i `styles/{datamängd}_{lager}.qml` läggs den på när lagret läggs till, och sparas som standardstil i GeoPackage-filen så att filen öppnas med stil även utan pluginet. Detaljplan följer Boverkets allmänna råd BFS 2020:6:
+
+- `anvandning`: färg efter `planbestammelse_farg` (70 % transparens), användningsgräns och beteckning (`B`, `BC`, `GATA` …). Kombinationer är sammanslagna till en yta med den första beteckningens färg.
+- Bestämmelser av samma typ med exakt samma yta i samma plan slås ihop till ett objekt (`antal_bestammelser`), så att en yta får en etikett (`BC`, `b e f h o p`). Bestämmelsetexterna behålls sammanfogade med ` + `.
+- `egenskap_*`: egenskapsgräns utan fyllning, beteckning i kursiv (`e`, `p` …). Bestämmelser som betecknas med symbol ritas som raster efter kolumnen `planbestammelse_symbol`: prickmark, korsmark, ringar (bjälklag, byggnadsverk under mark) och kombinationer.
+- `plan`: planområdesgräns. `administrativ` är dold från början.
+
+BFS 2020:6 anger färgerna som namn, inte värden. Paletten är modellerad på Lantmäteriets karta och finns i `tools/make_detaljplan_styles.py`, som bygger om QML-filerna (körs med QGIS Python).
 
 ### Resurser
 
@@ -65,7 +72,7 @@ ngp_downloader/
     styles.py         lägger på stil från styles/ och sparar den i GeoPackage
     planbestammelser.py  beteckning och färg från Boverkets planbestämmelsekatalog
     registry.py       läser datasets.json
-  styles/             QML per datamängd och geometrityp, t.ex. detaljplan_yta.qml
+  styles/             QML per datamängd och lager, t.ex. detaljplan_anvandning.qml
   gui/
     dock.py           huvudpanel
     auth_dialog.py    dialog för ny inloggning
@@ -110,6 +117,7 @@ För en intern källa, t.ex. en nätverksdisk: `python build.py --base-url file:
 
 - [ ] Verifiera och fyll i filter för Detaljplan, Översiktsplan m.fl.
 - [ ] QML-stilar för fler datamängder (finns för Detaljplan)
+- [ ] Detaljplan: sekundär egenskapsgräns och övriga symbolbeteckningar (linjer, pilar m.m.)
 
 ## Licens
 
