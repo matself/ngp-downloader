@@ -39,7 +39,7 @@ BFS 2020:6 anger färgerna som namn, inte värden. Paletten är modellerad på L
 
 **Strandskydd** (`tools/make_other_styles.py`): som NGP:s egen WMS, med 70 % transparens – rosa med rosaröd kontur där strandskydd gäller (utvidgat, generellt inritat, infört), nästan vit med mörkgrå kontur för undantag, upphävanden och avvisat. En legend-post per strandskyddstyp. Observera att det generella strandskyddet (100 m från strandlinjen) i regel inte är inritat – att en plats saknar yta betyder inte att strandskydd saknas.
 
-**Kulturhistorisk lämning**: som i Fornsök – fornlämning som brandorange symbol med runan ᚱ och röda ytor (70 % transparens) och linjer, övrig kulturhistorisk lämning som petrolblå symbol med Φ och blå konturer, övriga statusar (möjlig fornlämning, uppgift om, före detta) grå med ◇. Ytor och linjer får symbolen i mitten. Lämningsnummer som etikett från 1:5000. Symbolerna är inbäddade SVG och kräver inget typsnitt.
+**Kulturhistorisk lämning**: som i Fornsök – fornlämning som brandorange symbol med runan ᚱ och röda ytor (70 % transparens) och linjer, övrig kulturhistorisk lämning som petrolblå symbol med Φ och blå konturer, övriga statusar grå med ◇. Ytor och linjer får symbolen i mitten. Som Fornsöks standardval är före detta och ej kulturhistorisk lämning avbockade i lagerpanelen och lämningsnummer (etikett från 1:5000) avstängt – allt kan slås på. Symbolerna är inbäddade SVG och kräver inget typsnitt.
 
 ### Resurser
 
@@ -51,6 +51,14 @@ BFS 2020:6 anger färgerna som namn, inte värden. Paletten är modellerad på L
 - Länkar till andra webbplatser (t.ex. Fornsök) hämtas inte.
 
 Domänobjekten sparas som de levereras enligt respektive nationell specifikation – de tolkas inte. Observera att de kan ha ett annat koordinatsystem än referensobjekten (t.ex. kommunens lokala SWEREF 99-zon).
+
+## Lämningar från Riksantikvarieämbetet
+
+NGP:s *Kulturhistorisk lämning* är ett sökindex med få attribut (ingen socken eller RAÄ-nummer, maskerade texter). För hela registret finns datamängden **Lämningar (RAÄ, hela registret)**: pluginet hämtar RAÄ:s öppna GeoPackage per kommun, län eller för hela Sverige från `pub.raa.se/nedladdning/datauttag/lamningar_v1/` (uppdateras varje natt, ingen inloggning).
+
+- *Hämta lista* visar kommuner, län och hela Sverige med filstorlek; bocka i en eller flera och klicka *Hämta* (knappen blir *Avbryt hämtning* under tiden).
+- Filen sparas som `{RAÄ:s filnamn}_{datum}_{tid}.gpkg`, så en ny hämtning aldrig skriver över en inläst fil. Punkter, linjer och ytor läggs till med Fornsök-stil och alla attribut (`socken`, `raa_nummer`, `lamningstyp`, `beskrivning`, `terrang` …); lägesosäkerheten följer med som eget lager, avslaget från början.
+- Filen innehåller även tabellerna `lamning`, `egenskap` (typ, form, fyndmaterial …) och `ingaendelamning`.
 
 ## Autentisering
 
@@ -73,6 +81,7 @@ ngp_downloader/
     export.py         utplattning → GeoJSON → GeoPackage
     task.py           QgsTask för hämtning i bakgrunden
     resources.py      hämtning av resurser (assets) per roll
+    raa.py            RAÄ:s lämningsregister som nedladdningskälla
     styles.py         lägger på stil från styles/ och sparar den i GeoPackage
     planbestammelser.py  beteckning och färg från Boverkets planbestämmelsekatalog
     registry.py       läser datasets.json
@@ -119,9 +128,15 @@ För en intern källa, t.ex. en nätverksdisk: `python build.py --base-url file:
 
 ## Att göra
 
+- [ ] Välja filnamn för nedladdningen (i stället för det automatiska `{datamängd}_{tid}`)
+- [ ] Lägga till nya lager och grupper hopfällda i QGIS lagerpanel
 - [ ] Verifiera och fyll i filter för Detaljplan, Översiktsplan m.fl.
 - [ ] QML-stilar för fler datamängder (finns för Detaljplan, Strandskydd och Kulturhistorisk lämning)
 - [ ] Detaljplan: sekundär egenskapsgräns och övriga symbolbeteckningar (linjer, pilar m.m.)
+
+## Synpunkter till Lantmäteriet
+
+Erfarenheter av NGP per datamängd finns i [docs/synpunkter-lantmateriet.md](docs/synpunkter-lantmateriet.md).
 
 ## Licens
 

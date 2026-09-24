@@ -40,6 +40,14 @@
     { "id": "kulturhistorisklamning", "title": "Kulturhistorisk lämning", "version": "v1", "verified": true, "filters": [] },
     { "id": "gransforfjallnaraskog", "title": "Gräns för fjällnära skog", "version": "v1", "verified": true, "filters": [] },
     { "id": "geotekniskmarkundersokning", "title": "Geoteknisk markundersökning", "version": "v1", "verified": false, "filters": [] },
-    { "id": "stompunkt", "title": "Stompunkt", "version": "v1", "verified": false, "filters": [] }
+    { "id": "stompunkt", "title": "Stompunkt", "version": "v1", "verified": false, "filters": [] },
+    {
+      "id": "raa_lamningar",
+      "title": "Lämningar (RAÄ, hela registret)",
+      "source": "raa",
+      "verified": true,
+      "spec": "https://pub.raa.se/nedladdning/datauttag/lamningar_v1/",
+      "filters": []
+    }
   ]
 }

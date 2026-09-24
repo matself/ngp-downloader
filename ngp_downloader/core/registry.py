@@ -32,6 +32,8 @@ class Dataset:
     title: str
     version: str
     verified: bool = False
+    # "ngp" (Geodatakatalog STAC API) or "raa" (Riksantikvarieämbetet's file downloads).
+    source: str = "ngp"
     spec: str = ""
     filters: tuple[DatasetFilter, ...] = field(default_factory=tuple)
     # Listed bottom to top: the order layers are drawn in.
@@ -57,6 +59,7 @@ def load_datasets(path: Path = REGISTRY_PATH) -> list[Dataset]:
                 title=d.get("title", d["id"]),
                 version=d.get("version", "v1"),
                 verified=d.get("verified", False),
+                source=d.get("source", "ngp"),
                 spec=d.get("spec", ""),
                 filters=filters,
                 layer_types=tuple(

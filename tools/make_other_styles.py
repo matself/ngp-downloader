@@ -1,4 +1,4 @@
-"""Generate QML styles for Strandskydd and Kulturhistorisk lämning.
+"""Generate QML styles for Strandskydd and Kulturhistorisk lämning (NGP and RAÄ).
 
 Run with QGIS' Python, e.g.:
     "C:\\Program Files\\QGIS 3.44.2\\bin\\python-qgis.bat" tools\\make_other_styles.py
@@ -16,6 +16,7 @@ from qgis.core import (
     QgsApplication,
     QgsCentroidFillSymbolLayer,
     QgsFillSymbol,
+    QgsLinePatternFillSymbolLayer,
     QgsLineSymbol,
     QgsMarkerLineSymbolLayer,
     QgsMarkerSymbol,
@@ -26,8 +27,10 @@ from qgis.core import (
 from make_detaljplan_styles import fill_colour, label_settings, save
 
 
-def _rule(symbol, label: str, expression: str) -> QgsRuleBasedRenderer.Rule:
-    return QgsRuleBasedRenderer.Rule(symbol, 0, 0, expression, label)
+def _rule(symbol, label: str, expression: str, active: bool = True) -> QgsRuleBasedRenderer.Rule:
+    rule = QgsRuleBasedRenderer.Rule(symbol, 0, 0, expression, label)
+    rule.setActive(active)  # inactive = unchecked in the layer panel, can be switched on
+    return rule
 
 
 def _in(field: str, values: list[str]) -> str:
@@ -70,11 +73,18 @@ GLYPHS = {
     "phi": "M12 6 V18 M12 8.3 C15.2 8.3 15.2 15.7 12 15.7 C8.8 15.7 8.8 8.3 12 8.3",  # Φ
     "romb": "M12 7.5 L16.5 12 L12 16.5 L7.5 12 Z",  # ◇
 }
-# (label, statuses, marker colour, line colour, fill rgba or None, glyph)
+# (label, status or None for ELSE, marker colour, line colour, fill or None, glyph, on)
+# On/off as Fornsök's default layer choices.
 STATUS_CLASSES = [
-    ("Fornlämning", ["Fornlämning"], "#c84a19", "#e8352b", fill_colour("#f9b1aa"), "runa"),
-    ("Övrig kulturhistorisk lämning", ["Övrig kulturhistorisk lämning"], "#00547b", "#2f2fe0", None, "phi"),
-    ("Möjlig fornlämning / övriga", [], "#6c6c6c", "#6c6c6c", None, "romb"),  # ELSE
+    ("Fornlämning", "Fornlämning", "#c84a19", "#e8352b", fill_colour("#f9b1aa"), "runa", True),
+    ("Övrig kulturhistorisk lämning", "Övrig kulturhistorisk lämning", "#00547b", "#2f2fe0", None, "phi", True),
+    ("Möjlig fornlämning", "Möjlig fornlämning", "#6c6c6c", "#6c6c6c", None, "romb", True),
+    ("Uppgift om kulturhistorisk lämning", "Uppgift om kulturhistorisk lämning (ingen antikvarisk bedömning)",
+     "#8c8c8c", "#8c8c8c", None, "romb", True),
+    ("Före detta kulturhistorisk lämning", "Före detta kulturhistorisk lämning (ingen antikvarisk bedömning)",
+     "#a6a6a6", "#a6a6a6", None, "romb", False),
+    ("Ej kulturhistorisk lämning", "Ej kulturhistorisk lämning", "#a6a6a6", "#a6a6a6", None, "romb", False),
+    ("Övrigt", None, "#6c6c6c", "#6c6c6c", None, "romb", True),
 ]
 
 
@@ -110,19 +120,54 @@ def _lamning_symbol(geometry: str, marker: str, line: str, fill: str | None, gly
     return symbol
 
 
-def kulturhistorisk_lamning() -> None:
+# RAÄ's own register (pub.raa.se downloads): other field names and statuses.
+RAA_STATUS, RAA_NUMMER = "antikvariskbedomning", "lamningsnummer"
+RAA_STATUS_CLASSES = [
+    ("Fornlämning", "Fornlämning", "#c84a19", "#e8352b", fill_colour("#f9b1aa"), "runa", True),
+    ("Övrig kulturhistorisk lämning", "Övrig kulturhistorisk lämning", "#00547b", "#2f2fe0", None, "phi", True),
+    ("Möjlig fornlämning", "Möjlig fornlämning", "#6c6c6c", "#6c6c6c", None, "romb", True),
+    ("Ingen antikvarisk bedömning", "Ingen antikvarisk bedömning", "#8c8c8c", "#8c8c8c", None, "romb", True),
+    ("Ej kulturhistorisk lämning", "Ej kulturhistorisk lämning", "#a6a6a6", "#a6a6a6", None, "romb", False),
+    ("Övrigt", None, "#6c6c6c", "#6c6c6c", None, "romb", True),
+]
+
+
+def _lamning_styles(prefix: str, status_field: str, number_field: str, classes: list) -> None:
+    known = [c[1] for c in classes if c[1]]
     for geometry, qgis_type in (("punkt", "MultiPoint"), ("linje", "MultiLineString"), ("yta", "MultiPolygon")):
         root = QgsRuleBasedRenderer.Rule(None)
-        for label, statuses, marker, line, fill, glyph in STATUS_CLASSES:
-            expression = _in(STATUS, statuses) if statuses else "ELSE"
-            root.appendChild(_rule(_lamning_symbol(geometry, marker, line, fill, glyph), label, expression))
-        # Lämningsnummer beside the symbol when zoomed in.
-        labels = label_settings(f'"{NUMMER}"', 8, 5000)
+        for label, status, marker, line, fill, glyph, on in classes:
+            # Not ELSE: an ELSE rule would also catch statuses whose rule is switched off.
+            expression = (_in(status_field, [status]) if status
+                          else f'"{status_field}" IS NULL OR NOT ({_in(status_field, known)})')
+            root.appendChild(_rule(_lamning_symbol(geometry, marker, line, fill, glyph), label, expression, on))
+        # Lämningsnummer beside the symbol when zoomed in; off by default as in Fornsök.
+        labels = label_settings(f'"{number_field}"', 8, 5000)
         settings = labels.settings()
         settings.dist = 3.0
         labels.setSettings(settings)
-        save(qgis_type, f"kulturhistorisklamning_{geometry}", QgsRuleBasedRenderer(root), labels,
-             field_names=(STATUS, NUMMER))
+        save(qgis_type, f"{prefix}_{geometry}", QgsRuleBasedRenderer(root), labels,
+             field_names=(status_field, number_field), labels_on=False)
+
+
+def kulturhistorisk_lamning() -> None:
+    _lamning_styles("kulturhistorisklamning", STATUS, NUMMER, STATUS_CLASSES)
+
+
+def raa_lamningar() -> None:
+    _lamning_styles("raa_lamningar", RAA_STATUS, RAA_NUMMER, RAA_STATUS_CLASSES)
+    # Lägesosäkerhet: the area the remain may lie within, hatched grey.
+    symbol = QgsFillSymbol.createSimple({"style": "no", "outline_color": "#8c8c8c", "outline_width": "0.25",
+                                         "outline_style": "dash"})
+    hatch = QgsLinePatternFillSymbolLayer()
+    hatch.setLineAngle(45)
+    hatch.setDistance(2.0)  # mm, sparse so the remains stay readable
+    hatch.setSubSymbol(QgsLineSymbol.createSimple({"line_color": "#a0a0a0", "line_width": "0.15"}))
+    symbol.insertSymbolLayer(0, hatch)
+    root = QgsRuleBasedRenderer.Rule(None)
+    root.appendChild(_rule(symbol, "Lägesosäkerhet", "TRUE"))
+    save("MultiPolygon", "raa_lamningar_lagesosakerhet", QgsRuleBasedRenderer(root),
+         field_names=("lagesosakerhet_i_meter",))
 
 
 if __name__ == "__main__":
@@ -130,4 +175,5 @@ if __name__ == "__main__":
     app.initQgis()
     strandskydd()
     kulturhistorisk_lamning()
+    raa_lamningar()
     app.exitQgis()

@@ -187,13 +187,14 @@ DETALJPLAN_FIELDS = (
 )
 
 
-def save(geometry: str, name: str, renderer, labeling=None, field_names=DETALJPLAN_FIELDS) -> None:
+def save(geometry: str, name: str, renderer, labeling=None, field_names=DETALJPLAN_FIELDS,
+         labels_on: bool = True) -> None:
     fields = "&".join(f"field={f}:string" for f in field_names)
     layer = QgsVectorLayer(f"{geometry}?crs=EPSG:3006&{fields}", name, "memory")
     layer.setRenderer(renderer)
     if labeling:
         layer.setLabeling(labeling)
-        layer.setLabelsEnabled(True)
+        layer.setLabelsEnabled(labels_on)
     _msg, ok = layer.saveNamedStyle(str(OUT / f"{name}.qml"))
     print(f"{name}.qml", "ok" if ok else "FEL")
 

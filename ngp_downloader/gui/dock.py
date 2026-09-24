@@ -42,6 +42,8 @@ from ..config import DEFAULT_ENVIRONMENT, ENVIRONMENTS, NGP_CRS, PLUGIN_NAME, SE
 from ..core.auth import authcfg_exists
 from ..core.client import NgpClient, NgpError
 from ..core.registry import Dataset, load_datasets
+from ..core.raa import HIDDEN_SUFFIXES as RAA_HIDDEN_SUFFIXES
+from ..core.raa import RaaDownload, RaaFile, layers_in, list_files
 from ..core.resources import ResourceTask, is_downloadable, parse_assets
 from ..core.styles import apply_style
 from ..core.task import DownloadTask
@@ -69,6 +71,7 @@ class NgpDock(QDockWidget):
         self.filter_edits: dict[str, QLineEdit] = {}
         self._task: DownloadTask | None = None
         self._resource_task: ResourceTask | None = None
+        self._raa: RaaDownload | None = None
 
         body = QWidget()
         layout = QVBoxLayout(body)
@@ -228,8 +231,13 @@ class NgpDock(QDockWidget):
             self.auth_select.setConfigId(dlg.authcfg)
             self._save_settings()
 
+    def _is_raa(self) -> bool:
+        return self._dataset().source == "raa"
+
     def _on_dataset_changed(self) -> None:
         self.collection_list.clear()
+        # RAÄ files are whole kommuner/län: no search filters or area.
+        self.area_combo.setEnabled(not self._is_raa())
         while self.filter_form.rowCount():
             self.filter_form.removeRow(0)
         self.filter_edits.clear()
@@ -242,6 +250,9 @@ class NgpDock(QDockWidget):
             self.filter_edits[f.property] = edit
 
     def _load_collections(self) -> None:
+        if self._is_raa():
+            self._load_raa_files()
+            return
         authcfg = self._authcfg_or_warn()
         if not authcfg:
             return
@@ -323,6 +334,12 @@ class NgpDock(QDockWidget):
         return body
 
     def _start_download(self) -> None:
+        if self._raa is not None:  # the button reads "Avbryt" while RAÄ files download
+            self._raa.cancel()
+            return
+        if self._is_raa():
+            self._start_raa()
+            return
         if self._task is not None:
             self._message("En hämtning pågår redan.", Qgis.MessageLevel.Warning)
             return
@@ -475,3 +492,72 @@ class NgpDock(QDockWidget):
         if failures:
             text += f" – {len(failures)} misslyckades (se loggen)"
         self._message(text, Qgis.MessageLevel.Warning if failures else Qgis.MessageLevel.Success)
+
+    # --- RAÄ lämningsregister ---------------------------------------------
+
+    def _load_raa_files(self) -> None:
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            files = list_files()
+        except RuntimeError as e:
+            self._message(str(e), Qgis.MessageLevel.Critical)
+            return
+        finally:
+            QApplication.restoreOverrideCursor()
+        self.collection_list.clear()
+        for f in files:
+            item = QListWidgetItem(f"{f.name} ({f.level}, {f.size})")
+            item.setData(Qt.ItemDataRole.UserRole, f)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Unchecked)
+            self.collection_list.addItem(item)
+        self._message(f"{len(files)} filer från Riksantikvarieämbetet (uppdateras varje natt).")
+
+    def _start_raa(self) -> None:
+        files = [
+            self.collection_list.item(i).data(Qt.ItemDataRole.UserRole)
+            for i in range(self.collection_list.count())
+            if self.collection_list.item(i).checkState() == Qt.CheckState.Checked
+        ]
+        files = [f for f in files if isinstance(f, RaaFile)]
+        if not files:  # never download all of Sweden by default
+            self._message("Hämta listan och välj minst en kommun eller ett län.", Qgis.MessageLevel.Warning)
+            return
+        if not self.output_widget.filePath():
+            self._message("Välj en utdatamapp.", Qgis.MessageLevel.Warning)
+            return
+        self._save_settings()
+        self._raa = RaaDownload(files, Path(self.output_widget.filePath()), f"{datetime.now():%Y%m%d_%H%M%S}", self)
+        self._raa.progress.connect(self.status_label.setText)
+        self._raa.completed.connect(self._on_raa_completed)
+        self._raa.failed.connect(self._on_raa_failed)
+        self.download_btn.setText("Avbryt hämtning")
+        self._raa.start()
+
+    def _raa_finished(self) -> None:
+        self._raa = None
+        self.download_btn.setText("Hämta")
+
+    def _on_raa_failed(self, error: str) -> None:
+        self._raa_finished()
+        self._message(f"RAÄ-hämtningen misslyckades: {error}", Qgis.MessageLevel.Critical)
+
+    def _on_raa_completed(self, done: list) -> None:
+        self._raa_finished()
+        project = QgsProject.instance()
+        for raa_file, path in done:
+            # Style all layers before adding any (see _on_completed).
+            layers = []
+            for layer_name, suffix in layers_in(path):
+                layer = QgsVectorLayer(f"{path}|layername={layer_name}", f"{path.stem}_{suffix}", "ogr")
+                if layer.isValid():
+                    apply_style(layer, "raa_lamningar", suffix)
+                    layers.append((suffix, layer))
+            group = project.layerTreeRoot().insertGroup(0, path.stem)
+            for suffix, layer in layers:  # bottom to top
+                project.addMapLayer(layer, False)
+                node = group.insertLayer(0, layer)
+                if suffix in RAA_HIDDEN_SUFFIXES:
+                    node.setItemVisibilityChecked(False)
+        names = ", ".join(f.name for f, _ in done)
+        self._message(f"Lämningar från RAÄ hämtade: {names}", Qgis.MessageLevel.Success)
