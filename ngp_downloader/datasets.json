@@ -1,5 +1,5 @@
 {
-  "_comment": "Register över NGP-datamängder. 'verified' = testad mot API:et med riktigt token. Filter-nycklar motsvarar STAC query-attribut enligt respektive specifikation.",
+  "_comment": "Register över NGP-datamängder. 'verified' = testad mot API:et med riktigt token. 'layer_types' = lagernamn per feature:typ, nerifrån och upp. Filter-nycklar motsvarar STAC query-attribut enligt respektive specifikation.",
   "datasets": [
     {
       "id": "strandskydd",
@@ -22,7 +22,19 @@
         }
       ]
     },
-    { "id": "detaljplan", "title": "Detaljplan", "version": "v2", "verified": true, "filters": [] },
+    {
+      "id": "detaljplan",
+      "title": "Detaljplan",
+      "version": "v2",
+      "verified": true,
+      "filters": [],
+      "layer_types": [
+        { "typ": "användningsbestämmelse", "name": "anvandning" },
+        { "typ": "administrativ bestämmelse", "name": "administrativ", "hidden": true },
+        { "typ": "egenskapsbestämmelse", "name": "egenskap" },
+        { "typ": "detaljplan", "name": "plan" }
+      ]
+    },
     { "id": "oversiktsplan", "title": "Översiktsplan", "version": "v1", "verified": false, "filters": [] },
     { "id": "byggnad", "title": "Byggnad", "version": "v1", "verified": true, "filters": [] },
     { "id": "kulturhistorisklamning", "title": "Kulturhistorisk lämning", "version": "v1", "verified": true, "filters": [] },

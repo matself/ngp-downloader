@@ -20,6 +20,16 @@ Objekt utan geometri (t.ex. beslut i Strandskydd) kan inte avgränsas geografisk
 
 Referensobjekten är Lantmäteriets harmoniserade sökversion av domänobjekten (originalen från kommun/myndighet) och **ska inte användas som beslutsunderlag**. Länkarna till domänobjekt och dokument sparas i kolumnen `assets`.
 
+### Beteckning och färg (Detaljplan)
+
+Planbestämmelser har en referens till Boverkets planbestämmelsekatalog. Pluginet hämtar katalogen från Boverkets öppna API (`api.boverket.se/planbestammelsekatalogen`), cachar den i QGIS-profilen i 30 dagar och lägger till kolumnerna `planbestammelse_beteckning` (t.ex. `B`, `GATA`, `e`) och `planbestammelse_farg` (t.ex. `Gul`) enligt Boverkets allmänna råd BFS 2020:6. Färgen anges som namn – varken Boverket eller katalogen anger färgvärden.
+
+Källa: Boverket, Planbestämmelsekatalogen.
+
+### Stilar
+
+Finns en stil i `styles/{datamängd}_{yta|linje|punkt}.qml` läggs den på när lagret läggs till, och sparas som standardstil i GeoPackage-filen så att filen öppnas med stil även utan pluginet. Detaljplan har stil för ytor (användning färgad per kategori i plankartans färgtradition, egenskapsgränser, plangräns) och linjer (t.ex. utfartsförbud). Färgerna är inte Boverkets officiella värden.
+
 ### Resurser
 
 *Hämta resurser för aktivt lager…* laddar ner det som `assets` pekar på via NGP:s nedladdnings-API – domänobjekt och dokument som plankarta, planbeskrivning och beslut. Vilka roller som finns läses ur datat, så det fungerar för alla datamängder utan särskild kod.
@@ -52,7 +62,10 @@ ngp_downloader/
     export.py         utplattning → GeoJSON → GeoPackage
     task.py           QgsTask för hämtning i bakgrunden
     resources.py      hämtning av resurser (assets) per roll
+    styles.py         lägger på stil från styles/ och sparar den i GeoPackage
+    planbestammelser.py  beteckning och färg från Boverkets planbestämmelsekatalog
     registry.py       läser datasets.json
+  styles/             QML per datamängd och geometrityp, t.ex. detaljplan_yta.qml
   gui/
     dock.py           huvudpanel
     auth_dialog.py    dialog för ny inloggning
@@ -96,7 +109,7 @@ För en intern källa, t.ex. en nätverksdisk: `python build.py --base-url file:
 ## Att göra
 
 - [ ] Verifiera och fyll i filter för Detaljplan, Översiktsplan m.fl.
-- [ ] QML-stilar per datamängd
+- [ ] QML-stilar för fler datamängder (finns för Detaljplan)
 
 ## Licens
 

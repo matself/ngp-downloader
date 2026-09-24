@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -70,17 +71,56 @@ def split_by_geometry(features: list[dict[str, Any]]) -> dict[str, list[dict[str
     return groups
 
 
-def write_gpkg(features: list[dict[str, Any]], gpkg_path: Path, layer_name: str) -> list[str]:
-    """Write features to GeoPackage, one layer per geometry family.
+# Polygons first so that lines and points end up drawn on top of them.
+GEOMETRY_ORDER = ("yta", "linje", "punkt", "ovrigt", "utan_geometri")
+TYPE_FIELD = "feature_typ"
 
-    Returns the layer names written. A single-type result keeps `layer_name`
-    as is; mixed results get suffixes like `_punkt`, `_linje`, `_yta`.
+
+def _slug(text: str) -> str:
+    text = text.lower().translate(str.maketrans("åäöé", "aaoe"))
+    return re.sub(r"[^a-z0-9]+", "_", text).strip("_") or "ovrigt"
+
+
+def plan_layers(
+    features: list[dict[str, Any]], layer_name: str, type_names: dict[str, str] | None = None
+) -> list[tuple[str, list[dict[str, Any]]]]:
+    """Split features into layers per object type, then per geometry family.
+
+    Returns (layer name, features) bottom to top: types in `type_names` order
+    first, then others as found. Suffixes are only added where needed, so a
+    dataset with one type and one geometry keeps `layer_name` as is.
     """
-    groups = split_by_geometry(features)
+    type_names = type_names or {}
+    by_type: dict[Any, list[dict[str, Any]]] = {}
+    for feature in features:
+        by_type.setdefault(feature["properties"].get(TYPE_FIELD), []).append(feature)
+    types = [t for t in type_names if t in by_type] + [t for t in by_type if t not in type_names]
+
+    layers = []
+    for typ in types:
+        base = layer_name
+        if len(by_type) > 1:
+            base += "_" + (type_names.get(typ) or _slug(str(typ or "ovrigt")))
+        groups = split_by_geometry(by_type[typ])
+        for suffix in sorted(groups, key=GEOMETRY_ORDER.index):
+            name = base if len(groups) == 1 else f"{base}_{suffix}"
+            layers.append((name, groups[suffix]))
+    return layers
+
+
+def write_gpkg(
+    features: list[dict[str, Any]],
+    gpkg_path: Path,
+    layer_name: str,
+    type_names: dict[str, str] | None = None,
+) -> list[str]:
+    """Write features to GeoPackage, one layer per object type and geometry family.
+
+    Returns the layer names written, bottom to top.
+    """
     names = []
     with tempfile.TemporaryDirectory() as tmp:
-        for suffix, group in groups.items():
-            name = layer_name if len(groups) == 1 else f"{layer_name}_{suffix}"
+        for name, group in plan_layers(features, layer_name, type_names):
             geojson_path = Path(tmp) / f"{name}.geojson"
             write_geojson(group, geojson_path)
             geojson_to_gpkg(geojson_path, gpkg_path, name)

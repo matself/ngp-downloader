@@ -43,6 +43,7 @@ from ..core.auth import authcfg_exists
 from ..core.client import NgpClient, NgpError
 from ..core.registry import Dataset, load_datasets
 from ..core.resources import ResourceTask, is_downloadable, parse_assets
+from ..core.styles import apply_style
 from ..core.task import DownloadTask
 from .auth_dialog import CreateAuthDialog
 from .resource_dialog import ResourceDialog
@@ -336,11 +337,15 @@ class NgpDock(QDockWidget):
             return
         self._save_settings()
 
-        layer_name = f"{self._dataset().id}_{datetime.now():%Y%m%d_%H%M%S}"
+        dataset = self._dataset()
+        layer_name = f"{dataset.id}_{datetime.now():%Y%m%d_%H%M%S}"
+        type_names = {t.typ: t.name for t in dataset.layer_types}
         task = DownloadTask(
-            self._base_url(), authcfg, body, Path(self.output_widget.filePath()), layer_name
+            self._base_url(), authcfg, body, Path(self.output_widget.filePath()), layer_name, type_names
         )
-        task.completed.connect(self._on_completed)
+        task.completed.connect(
+            lambda gpkg, names, count: self._on_completed(gpkg, names, count, dataset, layer_name)
+        )
         task.failed.connect(self._on_failed)
         task.taskCompleted.connect(self._clear_task)
         task.taskTerminated.connect(self._clear_task)
@@ -353,12 +358,30 @@ class NgpDock(QDockWidget):
         self._task = None
         self.download_btn.setEnabled(True)
 
-    def _on_completed(self, gpkg_path: str, layer_names: list, count: int) -> None:
-        for layer_name in layer_names:
-            uri = f"{gpkg_path}|layername={layer_name}"
-            layer = QgsVectorLayer(uri, layer_name, "ogr")
+    def _on_completed(
+        self, gpkg_path: str, layer_names: list, count: int, dataset: Dataset, base_name: str
+    ) -> None:
+        # Style every layer first: saving a style writes to the GeoPackage, and
+        # doing that while the canvas renders an already added layer from the
+        # same file crashes QGIS (concurrent SQLite access).
+        layers = []
+        for layer_name in layer_names:  # bottom to top
+            layer = QgsVectorLayer(f"{gpkg_path}|layername={layer_name}", layer_name, "ogr")
             if layer.isValid():
-                QgsProject.instance().addMapLayer(layer)
+                suffix = layer_name[len(base_name) + 1:]
+                apply_style(layer, dataset.id, suffix)
+                layers.append((suffix, layer))
+
+        project = QgsProject.instance()
+        root = project.layerTreeRoot()
+        # Several layers from one download go into a group named after it.
+        parent = root.insertGroup(0, base_name) if len(layers) > 1 else root
+        hidden = {t.name for t in dataset.layer_types if t.hidden}
+        for suffix, layer in layers:
+            project.addMapLayer(layer, False)
+            node = parent.insertLayer(0, layer)
+            if suffix.split("_")[0] in hidden:
+                node.setItemVisibilityChecked(False)
         self._message(f"{count} objekt sparade i {gpkg_path}", Qgis.MessageLevel.Success)
 
     def _on_failed(self, error: str) -> None:

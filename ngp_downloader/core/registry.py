@@ -18,6 +18,15 @@ class DatasetFilter:
 
 
 @dataclass(frozen=True)
+class LayerType:
+    """How objects of one `feature:typ` become a layer: short name, visibility."""
+
+    typ: str
+    name: str
+    hidden: bool = False
+
+
+@dataclass(frozen=True)
 class Dataset:
     id: str
     title: str
@@ -25,6 +34,8 @@ class Dataset:
     verified: bool = False
     spec: str = ""
     filters: tuple[DatasetFilter, ...] = field(default_factory=tuple)
+    # Listed bottom to top: the order layers are drawn in.
+    layer_types: tuple[LayerType, ...] = ()
 
 
 def load_datasets(path: Path = REGISTRY_PATH) -> list[Dataset]:
@@ -48,6 +59,10 @@ def load_datasets(path: Path = REGISTRY_PATH) -> list[Dataset]:
                 verified=d.get("verified", False),
                 spec=d.get("spec", ""),
                 filters=filters,
+                layer_types=tuple(
+                    LayerType(t["typ"], t["name"], t.get("hidden", False))
+                    for t in d.get("layer_types", [])
+                ),
             )
         )
     return datasets
