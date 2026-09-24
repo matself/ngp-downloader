@@ -11,6 +11,9 @@ from qgis.core import (
     QgsApplication,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
+    QgsEditorWidgetSetup,
+    QgsFeatureRequest,
+    QgsField,
     QgsGeometry,
     QgsProject,
     QgsSettings,
@@ -39,10 +42,21 @@ from ..config import DEFAULT_ENVIRONMENT, ENVIRONMENTS, NGP_CRS, PLUGIN_NAME, SE
 from ..core.auth import authcfg_exists
 from ..core.client import NgpClient, NgpError
 from ..core.registry import Dataset, load_datasets
+from ..core.resources import ResourceTask, is_downloadable, parse_assets
 from ..core.task import DownloadTask
 from .auth_dialog import CreateAuthDialog
+from .resource_dialog import ResourceDialog
 
 AREA_NONE, AREA_EXTENT, AREA_SELECTION = "none", "extent", "selection"
+
+try:  # QGIS >= 3.38
+    from qgis.PyQt.QtCore import QMetaType
+
+    _STRING_FIELD_TYPE = QMetaType.Type.QString
+except (ImportError, AttributeError):  # older QGIS 3 uses QVariant types
+    from qgis.PyQt.QtCore import QVariant
+
+    _STRING_FIELD_TYPE = QVariant.String
 
 
 class NgpDock(QDockWidget):
@@ -53,6 +67,7 @@ class NgpDock(QDockWidget):
         self.datasets = load_datasets()
         self.filter_edits: dict[str, QLineEdit] = {}
         self._task: DownloadTask | None = None
+        self._resource_task: ResourceTask | None = None
 
         body = QWidget()
         layout = QVBoxLayout(body)
@@ -60,6 +75,7 @@ class NgpDock(QDockWidget):
         layout.addWidget(self._build_dataset_group())
         layout.addWidget(self._build_area_group())
         layout.addWidget(self._build_output_group())
+        layout.addWidget(self._build_resource_group())
         layout.addStretch()
 
         scroll = QScrollArea()
@@ -145,6 +161,20 @@ class NgpDock(QDockWidget):
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
+        return group
+
+    def _build_resource_group(self) -> QGroupBox:
+        group = QGroupBox("Resurser")
+        layout = QVBoxLayout(group)
+        hint = QLabel(
+            "Domänobjekt och dokument (t.ex. plankarta, beslut) för objekten i det "
+            "aktiva lagret. Markera objekt först för att bara hämta för dem."
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+        self.resource_btn = QPushButton("Hämta resurser för aktivt lager…")
+        self.resource_btn.clicked.connect(self._start_resources)
+        layout.addWidget(self.resource_btn)
         return group
 
     # --- settings --------------------------------------------------------
@@ -322,3 +352,92 @@ class NgpDock(QDockWidget):
 
     def _on_failed(self, error: str) -> None:
         self._message(f"Hämtningen misslyckades: {error}", Qgis.MessageLevel.Critical)
+
+    # --- resources -------------------------------------------------------
+
+    def _start_resources(self) -> None:
+        if self._resource_task is not None:
+            self._message("En resurshämtning pågår redan.", Qgis.MessageLevel.Warning)
+            return
+        layer = self.iface.activeLayer()
+        if not isinstance(layer, QgsVectorLayer) or "assets" not in layer.fields().names():
+            self._message("Välj ett lager hämtat med NGP nedladdning.", Qgis.MessageLevel.Warning)
+            return
+        authcfg = self._authcfg_or_warn()
+        if not authcfg:
+            return
+
+        dlg = ResourceDialog(layer, self)
+        if not dlg.exec():
+            return
+        roles = set(dlg.roles())
+
+        request = QgsFeatureRequest().setFlags(QgsFeatureRequest.Flag.NoGeometry)
+        request.setSubsetOfAttributes(["assets"], layer.fields())
+        ids = dlg.feature_ids()
+        if ids is not None:
+            request.setFilterFids(ids)
+        # feature id -> {role: [href, ...]}, and the unique resources to fetch
+        links: dict[int, dict[str, list[str]]] = {}
+        resources = {}
+        for feature in layer.getFeatures(request):
+            for r in parse_assets(feature["assets"]):
+                if r.role in roles and is_downloadable(r.href):
+                    links.setdefault(feature.id(), {}).setdefault(r.role, []).append(r.href)
+                    resources.setdefault(r.href, r)
+
+        gpkg = Path(layer.dataProvider().dataSourceUri().split("|")[0])
+        target_dir = gpkg.parent / f"{gpkg.stem}_resurser"
+        task = ResourceTask(authcfg, list(resources.values()), target_dir)
+        layer_id = layer.id()
+        task.completed.connect(
+            lambda paths, failures: self._on_resources_completed(layer_id, links, paths, failures, target_dir)
+        )
+        task.failed.connect(
+            lambda error: self._message(f"Resurshämtningen misslyckades: {error}", Qgis.MessageLevel.Critical)
+        )
+        task.taskCompleted.connect(self._clear_resource_task)
+        task.taskTerminated.connect(self._clear_resource_task)
+        self._resource_task = task
+        self.resource_btn.setEnabled(False)
+        self.status_label.setText(f"Hämtar {len(resources)} resurser… (följ förloppet i aktivitetshanteraren)")
+        QgsApplication.taskManager().addTask(task)
+
+    def _clear_resource_task(self) -> None:
+        self._resource_task = None
+        self.resource_btn.setEnabled(True)
+
+    def _on_resources_completed(self, layer_id, links, paths, failures, target_dir) -> None:
+        """Write local file paths to one `resurs_<roll>` column per role."""
+        layer = QgsProject.instance().mapLayer(layer_id)
+        if layer is None:  # removed while downloading; files are still saved
+            self._message(f"{len(paths)} resurser i {target_dir}", Qgis.MessageLevel.Success)
+            return
+        provider = layer.dataProvider()
+        roles = sorted({role for per_role in links.values() for role in per_role})
+        missing = [QgsField(f"resurs_{role}", _STRING_FIELD_TYPE) for role in roles
+                   if layer.fields().indexOf(f"resurs_{role}") < 0]
+        if missing:
+            provider.addAttributes(missing)
+            layer.updateFields()
+
+        changes: dict[int, dict[int, str]] = {}
+        for fid, per_role in links.items():
+            for role, hrefs in per_role.items():
+                files = [paths[h] for h in hrefs if h in paths]
+                if files:
+                    changes.setdefault(fid, {})[layer.fields().indexOf(f"resurs_{role}")] = "; ".join(files)
+        provider.changeAttributeValues(changes)
+        layer.reload()
+
+        # Clickable paths in the attribute form.
+        for role in roles:
+            layer.setEditorWidgetSetup(
+                layer.fields().indexOf(f"resurs_{role}"),
+                QgsEditorWidgetSetup("ExternalResource", {"UseLink": True, "FullUrl": True}),
+            )
+
+        text = f"{len(paths)} resurser i {target_dir}"
+        if failures:
+            text += f" – {len(failures)} misslyckades (se loggen)"
+        self._message(text, Qgis.MessageLevel.Warning if failures else Qgis.MessageLevel.Success)

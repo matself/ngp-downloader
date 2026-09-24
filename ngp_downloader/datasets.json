@@ -20,15 +20,14 @@
           "operator": "in",
           "suggestions": []
         }
-      ],
-      "asset_roles": ["strandskydd", "underlag", "beslutsdokument"]
+      ]
     },
-    { "id": "detaljplan", "title": "Detaljplan", "version": "v2", "verified": true, "filters": [], "asset_roles": [] },
-    { "id": "oversiktsplan", "title": "Översiktsplan", "version": "v1", "verified": true, "filters": [], "asset_roles": [] },
-    { "id": "byggnad", "title": "Byggnad", "version": "v1", "verified": true, "filters": [], "asset_roles": [] },
-    { "id": "kulturhistorisklamning", "title": "Kulturhistorisk lämning", "version": "v1", "verified": true, "filters": [], "asset_roles": [] },
-    { "id": "gransforfjallnaraskog", "title": "Gräns för fjällnära skog", "version": "v1", "verified": true, "filters": [], "asset_roles": [] },
-    { "id": "geotekniskmarkundersokning", "title": "Geoteknisk markundersökning", "version": "v1", "verified": true, "filters": [], "asset_roles": [] },
-    { "id": "stompunkt", "title": "Stompunkt", "version": "v1", "verified": false, "filters": [], "asset_roles": [] }
+    { "id": "detaljplan", "title": "Detaljplan", "version": "v2", "verified": true, "filters": [] },
+    { "id": "oversiktsplan", "title": "Översiktsplan", "version": "v1", "verified": true, "filters": [] },
+    { "id": "byggnad", "title": "Byggnad", "version": "v1", "verified": true, "filters": [] },
+    { "id": "kulturhistorisklamning", "title": "Kulturhistorisk lämning", "version": "v1", "verified": true, "filters": [] },
+    { "id": "gransforfjallnaraskog", "title": "Gräns för fjällnära skog", "version": "v1", "verified": true, "filters": [] },
+    { "id": "geotekniskmarkundersokning", "title": "Geoteknisk markundersökning", "version": "v1", "verified": true, "filters": [] },
+    { "id": "stompunkt", "title": "Stompunkt", "version": "v1", "verified": false, "filters": [] }
   ]
 }

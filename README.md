@@ -2,7 +2,7 @@
 
 QGIS-plugin för att söka och hämta referensobjekt från Lantmäteriets **Nationella geodataplattform (NGP)** – Strandskydd, Detaljplan, Översiktsplan m.fl. – och spara dem som GeoPackage.
 
-> Status: tidigt skelett (0.1.0). Ingen datamängd är ännu verifierad mot API:et med riktigt token.
+> Status: experimentell. Alla datamängder utom Stompunkt (ännu ej publicerad i produktion) är provade mot API:et.
 
 ## Hur det fungerar
 
@@ -16,7 +16,18 @@ Alla NGP-datamängder exponeras på samma sätt:
 
 Pluginet gör `POST /search` (valfritt filtrerat på delmängder/kommuner, attribut och geografi), följer `next`-länkar, plattar ut attributen och skriver `{datamängd}_{tid}.gpkg` + en `.geojson`. Koordinater är SWEREF 99 TM (EPSG:3006).
 
-Referensobjekten är en cachad kopia av domänobjekten och **ska inte användas som beslutsunderlag**. Länkarna till originalobjekt och beslutsdokument sparas i kolumnen `assets`.
+Referensobjekten är Lantmäteriets harmoniserade sökversion av domänobjekten (originalen från kommun/myndighet) och **ska inte användas som beslutsunderlag**. Länkarna till domänobjekt och dokument sparas i kolumnen `assets`.
+
+### Resurser
+
+*Hämta resurser för aktivt lager…* laddar ner det som `assets` pekar på via NGP:s nedladdnings-API – domänobjekt och dokument som plankarta, planbeskrivning och beslut. Vilka roller som finns läses ur datat, så det fungerar för alla datamängder utan särskild kod.
+
+- Varje fil hämtas en gång även om många objekt pekar på den (en detaljplan = ett domänobjekt för alla bestämmelser).
+- Fyra filer hämtas parallellt; redan hämtade filer hoppas över (`resurser.json` i mappen håller reda på dem).
+- Filerna sparas oförändrade i `{geopackage}_resurser/{roll}/` och sökvägen skrivs till kolumnen `resurs_{roll}`.
+- Länkar till andra webbplatser (t.ex. Fornsök) hämtas inte.
+
+Domänobjekten sparas som de levereras enligt respektive nationell specifikation – de tolkas inte. Observera att de kan ha ett annat koordinatsystem än referensobjekten (t.ex. kommunens lokala SWEREF 99-zon).
 
 ## Autentisering
 
@@ -38,10 +49,12 @@ ngp_downloader/
     client.py         STAC-klient (QgsBlockingNetworkRequest + authcfg)
     export.py         utplattning → GeoJSON → GeoPackage
     task.py           QgsTask för hämtning i bakgrunden
+    resources.py      hämtning av resurser (assets) per roll
     registry.py       läser datasets.json
   gui/
     dock.py           huvudpanel
     auth_dialog.py    dialog för ny inloggning
+    resource_dialog.py  val av resurser att hämta
 ```
 
 Ny datamängd = en rad i `datasets.json` (id, version, filterattribut).
@@ -80,8 +93,6 @@ För en intern källa, t.ex. en nätverksdisk: `python build.py --base-url file:
 
 ## Att göra
 
-- [ ] Verifiera Strandskydd mot API:et (collections, query-syntax, paginering)
-- [ ] Hämtning av assets per roll (domänobjekt, beslutsdokument) via nedladdnings-API:et
 - [ ] Verifiera och fyll i filter för Detaljplan, Översiktsplan m.fl.
 - [ ] QML-stilar per datamängd
 

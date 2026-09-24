@@ -25,7 +25,6 @@ class Dataset:
     verified: bool = False
     spec: str = ""
     filters: tuple[DatasetFilter, ...] = field(default_factory=tuple)
-    asset_roles: tuple[str, ...] = ()
 
 
 def load_datasets(path: Path = REGISTRY_PATH) -> list[Dataset]:
@@ -49,7 +48,6 @@ def load_datasets(path: Path = REGISTRY_PATH) -> list[Dataset]:
                 verified=d.get("verified", False),
                 spec=d.get("spec", ""),
                 filters=filters,
-                asset_roles=tuple(d.get("asset_roles", [])),
             )
         )
     return datasets
