@@ -255,13 +255,24 @@ class NgpDock(QDockWidget):
             QApplication.restoreOverrideCursor()
 
         self.collection_list.clear()
-        for c in sorted(collections, key=lambda c: c.get("title") or c.get("id", "")):
-            item = QListWidgetItem(f"{c.get('title') or c['id']} ({c['id']})")
+        labelled = [(self._collection_label(c), c) for c in collections]
+        for label, c in sorted(labelled, key=lambda lc: lc[0].lower()):
+            item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, c["id"])
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Unchecked)
             self.collection_list.addItem(item)
         self._message(f"{len(collections)} delmängder hämtade.")
+
+    @staticmethod
+    def _collection_label(collection: dict) -> str:
+        """E.g. "Bodens kommun (2582)": many collections are titled with just their code."""
+        cid = collection["id"]
+        title = collection.get("title") or cid
+        if title == cid:
+            providers = [p.get("name") for p in collection.get("providers", []) if p.get("name")]
+            title = providers[0] if providers else cid
+        return title if title == cid else f"{title} ({cid})"
 
     def _filter_collection_list(self, text: str) -> None:
         text = text.lower()

@@ -2,7 +2,7 @@
 
 QGIS-plugin för att söka och hämta referensobjekt från Lantmäteriets **Nationella geodataplattform (NGP)** – Strandskydd, Detaljplan, Översiktsplan m.fl. – och spara dem som GeoPackage.
 
-> Status: experimentell. Alla datamängder utom Stompunkt (ännu ej publicerad i produktion) är provade mot API:et.
+> Status: experimentell. Strandskydd, Detaljplan, Byggnad, Kulturhistorisk lämning och Gräns för fjällnära skog är provade mot API:et. Översiktsplan, Geoteknisk markundersökning och Stompunkt svarar ännu 404 (inte publicerade).
 
 ## Hur det fungerar
 
@@ -15,6 +15,8 @@ Alla NGP-datamängder exponeras på samma sätt:
 | Token (OAuth2) | `https://apimanager.lantmateriet.se/oauth2/token` |
 
 Pluginet gör `POST /search` (valfritt filtrerat på delmängder/kommuner, attribut och geografi), följer `next`-länkar, plattar ut attributen och skriver `{datamängd}_{tid}.gpkg` + en `.geojson`. Koordinater är SWEREF 99 TM (EPSG:3006).
+
+Objekt utan geometri (t.ex. beslut i Strandskydd) kan inte avgränsas geografiskt eller på attribut – API:et returnerar alla i hela datamängden. De tas därför bort när sökningen har sådana filter.
 
 Referensobjekten är Lantmäteriets harmoniserade sökversion av domänobjekten (originalen från kommun/myndighet) och **ska inte användas som beslutsunderlag**. Länkarna till domänobjekt och dokument sparas i kolumnen `assets`.
 

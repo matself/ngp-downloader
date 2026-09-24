@@ -13,6 +13,8 @@ from .client import NgpClient, NgpError
 from .export import item_to_feature, write_geojson, write_gpkg
 
 PAGE_LIMIT = 1000  # API max is 10000; smaller pages give smoother progress.
+# Search filters that objects without geometry can never meet.
+UNMATCHABLE_FILTERS = ("query", "bbox", "intersects")
 
 
 class DownloadTask(QgsTask):
@@ -62,6 +64,15 @@ class DownloadTask(QgsTask):
         except NgpError as e:
             self.error = e.describe()
             return False
+
+        if any(key in self.search_body for key in UNMATCHABLE_FILTERS):
+            # Objects without geometry (e.g. Strandskydd decisions) lack the filtered
+            # attributes and location, so the API returns all of them regardless.
+            with_geometry = [f for f in features if f["geometry"]]
+            dropped = len(features) - len(with_geometry)
+            if dropped:
+                self._log(f"{dropped} objekt utan geometri borttagna – filtret kan inte tillämpas på dem")
+            features = with_geometry
 
         if not features:
             self.error = "Sökningen gav inga träffar."

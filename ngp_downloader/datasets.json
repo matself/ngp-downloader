@@ -23,11 +23,11 @@
       ]
     },
     { "id": "detaljplan", "title": "Detaljplan", "version": "v2", "verified": true, "filters": [] },
-    { "id": "oversiktsplan", "title": "Översiktsplan", "version": "v1", "verified": true, "filters": [] },
+    { "id": "oversiktsplan", "title": "Översiktsplan", "version": "v1", "verified": false, "filters": [] },
     { "id": "byggnad", "title": "Byggnad", "version": "v1", "verified": true, "filters": [] },
     { "id": "kulturhistorisklamning", "title": "Kulturhistorisk lämning", "version": "v1", "verified": true, "filters": [] },
     { "id": "gransforfjallnaraskog", "title": "Gräns för fjällnära skog", "version": "v1", "verified": true, "filters": [] },
-    { "id": "geotekniskmarkundersokning", "title": "Geoteknisk markundersökning", "version": "v1", "verified": true, "filters": [] },
+    { "id": "geotekniskmarkundersokning", "title": "Geoteknisk markundersökning", "version": "v1", "verified": false, "filters": [] },
     { "id": "stompunkt", "title": "Stompunkt", "version": "v1", "verified": false, "filters": [] }
   ]
 }
