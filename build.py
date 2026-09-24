@@ -70,7 +70,8 @@ def build_plugins_xml(meta: dict[str, str], zip_name: str, base_url: str) -> Pat
 
     ET.indent(plugins)
     xml_path = ROOT / "plugins.xml"
-    ET.ElementTree(plugins).write(xml_path, encoding="utf-8", xml_declaration=True)
+    # Bytes, not text mode, so Windows doesn't turn newlines into CRLF.
+    xml_path.write_bytes(ET.tostring(plugins, encoding="utf-8", xml_declaration=True) + b"\n")
     return xml_path
 
 
