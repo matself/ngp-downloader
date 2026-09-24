@@ -1,4 +1,4 @@
-# NGP Downloader
+# NGP nedladdning
 
 QGIS-plugin för att söka och hämta referensobjekt från Lantmäteriets **Nationella geodataplattform (NGP)** – Strandskydd, Detaljplan, Översiktsplan m.fl. – och spara dem som GeoPackage.
 
@@ -53,7 +53,29 @@ Länka in plugin-mappen i QGIS-profilen (kör i `cmd` som administratör eller m
 mklink /J "%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\ngp_downloader" "C:\GITHUB\ngp-downloader\ngp_downloader"
 ```
 
-Starta om QGIS, aktivera *NGP Downloader* under Insticksprogram. Använd gärna *Plugin Reloader* under utveckling. Loggar hamnar i fliken *NGP Downloader* i loggpanelen.
+Starta om QGIS, aktivera *NGP nedladdning* under Insticksprogram. Använd gärna *Plugin Reloader* under utveckling. Loggar hamnar i fliken *NGP nedladdning* i loggpanelen.
+
+## Installera
+
+Pluginet finns inte i det officiella plugin-repot. Lägg i stället till det här repot som plugin-källa i QGIS:
+
+1. *Insticksprogram → Hantera och installera → Inställningar → Lägg till…*
+2. URL: `https://raw.githubusercontent.com/matself/ngp-downloader/main/plugins.xml`
+3. Kryssa i *Visa även experimentella insticksprogram* (pluginet är markerat experimentellt).
+4. Sök efter *NGP nedladdning* och installera. Nya versioner visas sedan som vanliga uppdateringar.
+
+Alternativt: hämta zip-filen under [Releases](https://github.com/matself/ngp-downloader/releases) och välj *Installera från ZIP*.
+
+## Ny version
+
+1. Höj `version` i `ngp_downloader/metadata.txt` och committa.
+2. `python build.py` – skapar `dist/ngp_downloader-<version>.zip` och uppdaterar `plugins.xml`.
+3. Committa `plugins.xml`, pusha och skapa releasen:
+   ```
+   gh release create v<version> dist/ngp_downloader-<version>.zip --title "v<version>"
+   ```
+
+För en intern källa, t.ex. en nätverksdisk: `python build.py --base-url file:///S:/qgis-plugins` och kopiera zip-filen och `plugins.xml` dit.
 
 ## Att göra
 
