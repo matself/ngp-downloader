@@ -1,0 +1,89 @@
+"""Background task: search a dataset and save the hits as GeoPackage."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from qgis.core import Qgis, QgsFeedback, QgsMessageLog, QgsTask
+from qgis.PyQt.QtCore import pyqtSignal
+
+from ..config import PLUGIN_NAME
+from .client import NgpClient, NgpError
+from .export import geojson_to_gpkg, item_to_feature, write_geojson
+
+PAGE_LIMIT = 1000  # API max is 10000; smaller pages give smoother progress.
+
+
+class DownloadTask(QgsTask):
+    # Emitted in the main thread via QgsTask.finished → safe for UI work.
+    completed = pyqtSignal(str, str, int)  # gpkg path, layer name, feature count
+    failed = pyqtSignal(str)
+
+    def __init__(
+        self,
+        base_url: str,
+        authcfg: str,
+        search_body: dict[str, Any],
+        output_dir: Path,
+        layer_name: str,
+    ):
+        super().__init__(f"NGP: hämtar {layer_name}", QgsTask.Flag.CanCancel)
+        self.base_url = base_url
+        self.authcfg = authcfg
+        self.search_body = {**search_body, "limit": PAGE_LIMIT}
+        self.output_dir = output_dir
+        self.layer_name = layer_name
+        self.gpkg_path = output_dir / f"{layer_name}.gpkg"
+        self.feature_count = 0
+        self.error: str | None = None
+        self._feedback = QgsFeedback()
+
+    def cancel(self) -> None:
+        # Aborts an in-flight network request, not just the next page.
+        self._feedback.cancel()
+        super().cancel()
+
+    def run(self) -> bool:
+        client = NgpClient(self.base_url, self.authcfg, self._feedback)
+        self._log(f"POST {self.base_url}/search {self.search_body}")
+
+        features = []
+        try:
+            for page in client.search(self.search_body):
+                if self.isCanceled():
+                    return False
+                features.extend(item_to_feature(i) for i in page.get("features", []))
+                matched = page.get("numberMatched") or page.get("context", {}).get("matched")
+                if matched:
+                    self.setProgress(min(99.0, 100.0 * len(features) / matched))
+                self._log(f"{len(features)} objekt hämtade")
+        except NgpError as e:
+            self.error = f"HTTP {e.status}: {e}" if e.status else str(e)
+            return False
+
+        if not features:
+            self.error = "Sökningen gav inga träffar."
+            return False
+
+        try:
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            geojson_path = self.output_dir / f"{self.layer_name}.geojson"
+            write_geojson(features, geojson_path)
+            geojson_to_gpkg(geojson_path, self.gpkg_path, self.layer_name)
+        except Exception as e:  # noqa: BLE001 — report any write failure to the UI
+            self.error = str(e)
+            return False
+
+        self.feature_count = len(features)
+        return True
+
+    def finished(self, result: bool) -> None:
+        if result:
+            self.completed.emit(str(self.gpkg_path), self.layer_name, self.feature_count)
+        elif not self.isCanceled():
+            self._log(self.error or "Okänt fel", Qgis.MessageLevel.Critical)
+            self.failed.emit(self.error or "Okänt fel")
+
+    def _log(self, message: str, level=Qgis.MessageLevel.Info) -> None:
+        QgsMessageLog.logMessage(message, PLUGIN_NAME, level)

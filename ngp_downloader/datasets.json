@@ -1,0 +1,34 @@
+{
+  "_comment": "Register över NGP-datamängder. 'verified' = testad mot API:et med riktigt token. Filter-nycklar motsvarar STAC query-attribut enligt respektive specifikation.",
+  "datasets": [
+    {
+      "id": "strandskydd",
+      "title": "Strandskydd",
+      "version": "v1",
+      "verified": false,
+      "spec": "https://namespace.lantmateriet.se/distribution/geodatakatalog/sokning/v1/strandskydd/v1/strandskydd-api-1.0.html",
+      "filters": [
+        {
+          "property": "strandskydd.strandskyddstyp",
+          "label": "Strandskyddstyp",
+          "operator": "in",
+          "suggestions": ["generellt", "utökat"]
+        },
+        {
+          "property": "strandskydd.kommunkod",
+          "label": "Kommunkod",
+          "operator": "in",
+          "suggestions": []
+        }
+      ],
+      "asset_roles": ["strandskydd", "underlag", "beslutsdokument"]
+    },
+    { "id": "detaljplan", "title": "Detaljplan", "version": "v2", "verified": false, "filters": [], "asset_roles": [] },
+    { "id": "oversiktsplan", "title": "Översiktsplan", "version": "v1", "verified": false, "filters": [], "asset_roles": [] },
+    { "id": "byggnad", "title": "Byggnad", "version": "v1", "verified": false, "filters": [], "asset_roles": [] },
+    { "id": "kulturhistorisklamning", "title": "Kulturhistorisk lämning", "version": "v1", "verified": false, "filters": [], "asset_roles": [] },
+    { "id": "gransforfjallnaraskog", "title": "Gräns för fjällnära skog", "version": "v1", "verified": false, "filters": [], "asset_roles": [] },
+    { "id": "geotekniskmarkundersokning", "title": "Geoteknisk markundersökning", "version": "v1", "verified": false, "filters": [], "asset_roles": [] },
+    { "id": "stompunkt", "title": "Stompunkt", "version": "v1", "verified": false, "filters": [], "asset_roles": [] }
+  ]
+}

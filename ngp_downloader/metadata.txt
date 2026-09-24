@@ -1,0 +1,18 @@
+[general]
+name=NGP Downloader
+qgisMinimumVersion=3.34
+qgisMaximumVersion=4.99
+supportsQt6=True
+description=Sök och hämta referensobjekt från Nationella geodataplattformen (NGP)
+about=Söker i Lantmäteriets Geodatakatalog (STAC) för NGP-datamängder som Strandskydd, Detaljplan och Översiktsplan, och sparar träffarna som GeoPackage. Autentisering sker via QGIS inbyggda autentiseringshanterare (OAuth2).
+version=0.1.0
+author=Mats Elfström
+email=mats.elfstrom@gmail.com
+category=Web
+tags=ngp,lantmäteriet,stac,strandskydd,detaljplan,sverige
+license=GPL-2.0-or-later
+experimental=True
+deprecated=False
+homepage=https://github.com/
+repository=https://github.com/
+tracker=https://github.com/
