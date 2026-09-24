@@ -62,6 +62,8 @@ NGP:s *Kulturhistorisk lämning* är ett sökindex med få attribut (ingen socke
 
 ## Autentisering
 
+För NGP-datamängderna behövs en egen inloggning: beställ åtkomst till NGP:s Geodatakatalog hos Lantmäteriet via [Geotorget](https://geotorget.lantmateriet.se/), så får du en *consumer key* och *consumer secret*. Kontot måste ha behörighet till de datamängder du vill hämta. Lämningar från RAÄ kräver ingen inloggning.
+
 Pluginet lagrar inga inloggningsuppgifter. Det sparar bara id:t för en konfiguration i **QGIS autentiseringshanterare**; nyckel/hemlighet ligger krypterat i QGIS databas och tokens hämtas och förnyas av QGIS OAuth2-metod.
 
 - **"Ny Lantmäteriet-inloggning…"** skapar en OAuth2-konfiguration (client credentials) med rätt token-URL för vald miljö.
