@@ -80,6 +80,10 @@ class NgpDock(QDockWidget):
         layout.addWidget(self._build_area_group())
         layout.addWidget(self._build_output_group())
         layout.addWidget(self._build_resource_group())
+        note = QLabel("Fristående plugin, inte utvecklat av Lantmäteriet.")
+        note.setWordWrap(True)
+        note.setEnabled(False)
+        layout.addWidget(note)
         layout.addStretch()
 
         scroll = QScrollArea()
