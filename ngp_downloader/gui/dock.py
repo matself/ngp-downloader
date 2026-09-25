@@ -418,7 +418,7 @@ class NgpDock(QDockWidget):
             return
         layer = self.iface.activeLayer()
         if not isinstance(layer, QgsVectorLayer) or "assets" not in layer.fields().names():
-            self._message("Välj ett lager hämtat med NGP nedladdning.", Qgis.MessageLevel.Warning)
+            self._message("Välj ett lager hämtat med LM-NGP Downloader.", Qgis.MessageLevel.Warning)
             return
         authcfg = self._authcfg_or_warn()
         if not authcfg:

@@ -2,7 +2,7 @@
 
 *Utkast, september 2026.*
 
-Vi har byggt ett QGIS-plugin ([NGP nedladdning](https://github.com/matself/ngp-downloader)) mot Geodatakatalogens sök- och nedladdnings-API och testat samtliga publicerade datamängder med produktionsdata. Sammanfattningsvis fungerar plattformen tekniskt väl, men nyttan varierar mellan datamängderna.
+Vi har byggt ett QGIS-plugin ([LM-NGP Downloader](https://github.com/matself/ngp-downloader)) mot Geodatakatalogens sök- och nedladdnings-API och testat samtliga publicerade datamängder med produktionsdata. Sammanfattningsvis fungerar plattformen tekniskt väl, men nyttan varierar mellan datamängderna.
 
 ## Detaljplan – tydligt mervärde
 

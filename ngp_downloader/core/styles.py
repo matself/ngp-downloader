@@ -9,6 +9,8 @@ from pathlib import Path
 
 from qgis.core import Qgis, QgsMapLayer, QgsVectorLayer
 
+from ..config import PLUGIN_NAME
+
 STYLES_DIR = Path(__file__).resolve().parent.parent / "styles"
 SUFFIXES = {
     Qgis.GeometryType.Point: "punkt",
@@ -45,8 +47,8 @@ def apply_style(layer: QgsVectorLayer, dataset_id: str, layer_suffix: str = "") 
         # Default style in the GeoPackage's layer_styles table: the file opens
         # styled in any QGIS, also without this plugin.
         if hasattr(layer, "saveStyleToDatabaseV2"):  # QGIS >= 3.40
-            layer.saveStyleToDatabaseV2(dataset_id, "NGP nedladdning", True, "", CATEGORIES)
+            layer.saveStyleToDatabaseV2(dataset_id, PLUGIN_NAME, True, "", CATEGORIES)
         else:
-            layer.saveStyleToDatabase(dataset_id, "NGP nedladdning", True, "", CATEGORIES)
+            layer.saveStyleToDatabase(dataset_id, PLUGIN_NAME, True, "", CATEGORIES)
         layer.triggerRepaint()
     return ok
