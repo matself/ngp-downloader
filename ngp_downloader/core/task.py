@@ -22,6 +22,9 @@ class DownloadTask(QgsTask):
     # Emitted in the main thread via QgsTask.finished → safe for UI work.
     completed = pyqtSignal(str, list, int)  # gpkg path, layer names, feature count
     failed = pyqtSignal(str)
+    # Progress as text, e.g. "12000 objekt hämtade (anrop 12)": NGP gives no total
+    # count, so the fetch cannot be shown as a percentage. Queued to the main thread.
+    status = pyqtSignal(str)
 
     def __init__(
         self,
@@ -55,14 +58,16 @@ class DownloadTask(QgsTask):
         self._log(f"POST {self.base_url}/search {self.search_body}")
 
         features = []
+        self.status.emit("söker…")
         try:
-            for page in client.search(self.search_body):
+            for page_no, page in enumerate(client.search(self.search_body), start=1):
                 if self.isCanceled():
                     return False
                 features.extend(item_to_feature(i) for i in page.get("features", []))
                 matched = page.get("numberMatched") or page.get("context", {}).get("matched")
-                if matched:
-                    self.setProgress(min(99.0, 100.0 * len(features) / matched))
+                if matched:  # not provided by NGP today, but used if it appears
+                    self.setProgress(min(80.0, 80.0 * len(features) / matched))
+                self.status.emit(f"{len(features)} objekt hämtade (anrop {page_no})")
                 self._log(f"{len(features)} objekt hämtade")
         except NgpError as e:
             self.error = e.describe()
@@ -81,7 +86,9 @@ class DownloadTask(QgsTask):
             self.error = "Sökningen gav inga träffar."
             return False
 
+        self.setProgress(85)
         if needs_catalog(features):
+            self.status.emit(f"{len(features)} objekt – planbestämmelsekatalogen…")
             try:
                 catalog = load_catalog(self._feedback)
                 matched = enrich(features, catalog)
@@ -89,11 +96,14 @@ class DownloadTask(QgsTask):
                           f"({catalog.get('release')}): {matched} objekt")
             except Exception as e:  # noqa: BLE001 — the data is still useful without it
                 self._log(f"Planbestämmelsekatalogen kunde inte användas: {e}", Qgis.MessageLevel.Warning)
+            self.setProgress(90)
             before = len(features)
             features = merge_combinations(features)
             if len(features) < before:
                 self._log(f"Bestämmelser med samma yta sammanslagna: {before} → {len(features)} objekt")
 
+        self.setProgress(95)
+        self.status.emit(f"{len(features)} objekt – skriver GeoPackage…")
         try:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             geojson_path = self.output_dir / f"{self.layer_name}.geojson"

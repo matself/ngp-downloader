@@ -363,6 +363,7 @@ class NgpDock(QDockWidget):
         task.completed.connect(
             lambda gpkg, names, count: self._on_completed(gpkg, names, count, dataset, layer_name)
         )
+        task.status.connect(lambda text, t=task: self._on_task_status(t, f"{dataset.title}: {text}"))
         task.failed.connect(self._on_failed)
         task.taskCompleted.connect(self._clear_task)
         task.taskTerminated.connect(self._clear_task)
@@ -370,6 +371,11 @@ class NgpDock(QDockWidget):
         self.download_btn.setEnabled(False)
         self.status_label.setText("Hämtar… (följ förloppet i aktivitetshanteraren)")
         QgsApplication.taskManager().addTask(task)
+
+    def _on_task_status(self, task: DownloadTask, text: str) -> None:
+        self.status_label.setText(text)
+        if hasattr(task, "setDescription"):  # shown in QGIS' task manager
+            task.setDescription(f"NGP: {text}")
 
     def _clear_task(self) -> None:
         self._task = None
