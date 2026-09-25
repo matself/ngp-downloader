@@ -4,6 +4,8 @@ QGIS-plugin för att söka och hämta referensobjekt från Lantmäteriets **Nati
 
 Pluginet är fristående och inte utvecklat av Lantmäteriet. "Lantmäteriet" i namnet anger var datat kommer ifrån.
 
+Se **[användningsbeskrivningen](docs/anvandning.md)** för hela flödet, från inloggning till hämtning, och felsökning.
+
 > Status: experimentell. Strandskydd, Detaljplan, Byggnad, Kulturhistorisk lämning och Gräns för fjällnära skog är provade mot API:et. Översiktsplan, Geoteknisk markundersökning och Stompunkt svarar ännu 404 (inte publicerade).
 
 ## Hur det fungerar
