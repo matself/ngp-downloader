@@ -1,10 +1,10 @@
 [general]
-name=LM-NGP Downloader
+name=NGP Downloader (Lantmäteriet)
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 supportsQt6=True
 description=Sök och hämta referensobjekt från Nationella geodataplattformen (NGP)
-about=Söker i Lantmäteriets Geodatakatalog (STAC) för NGP-datamängder som Strandskydd, Detaljplan och Översiktsplan, och sparar träffarna som GeoPackage. Autentisering sker via QGIS inbyggda autentiseringshanterare (OAuth2).
+about=Fristående plugin, inte utvecklat av Lantmäteriet. Söker i Lantmäteriets Geodatakatalog (NGP) och sparar datamängder som Detaljplan, Strandskydd och Kulturhistorisk lämning som GeoPackage med färdig stil: detaljplaner som plankartor enligt Boverkets allmänna råd BFS 2020:6, strandskydd som i NGP:s kartvisning och lämningar som i Fornsök. Hämtar även plankartor och andra resurser, samt Riksantikvarieämbetets öppna lämningsregister. NGP kräver egen inloggning via Lantmäteriet; autentisering sker via QGIS inbyggda autentiseringshanterare (OAuth2).
 version=0.4.2
 author=Mats Elfström
 email=mats.elfstrom@gmail.com
