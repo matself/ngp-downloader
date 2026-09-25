@@ -1,17 +1,17 @@
 <?xml version='1.0' encoding='utf-8'?>
 <plugins>
-  <pyqgis_plugin name="NGP Downloader (Lantmäteriet)" version="0.4.3" plugin_id="ngp_downloader">
+  <pyqgis_plugin name="NGP Downloader (Lantmäteriet)" version="0.4.4" plugin_id="ngp_downloader">
     <description>Sök och hämta referensobjekt från Nationella geodataplattformen (NGP)</description>
     <about>Fristående plugin, inte utvecklat av Lantmäteriet. Söker i Lantmäteriets Geodatakatalog (NGP) och sparar datamängder som Detaljplan, Strandskydd och Kulturhistorisk lämning som GeoPackage med färdig stil: detaljplaner som plankartor enligt Boverkets allmänna råd BFS 2020:6, strandskydd som i NGP:s kartvisning och lämningar som i Fornsök. Hämtar även plankartor och andra resurser, samt Riksantikvarieämbetets öppna lämningsregister. NGP kräver egen inloggning via Lantmäteriet; autentisering sker via QGIS inbyggda autentiseringshanterare (OAuth2).</about>
-    <version>0.4.3</version>
+    <version>0.4.4</version>
     <qgis_minimum_version>3.34</qgis_minimum_version>
     <qgis_maximum_version>4.99</qgis_maximum_version>
     <supports_qt6>True</supports_qt6>
     <homepage>https://github.com/matself/ngp-downloader</homepage>
-    <file_name>ngp_downloader.0.4.3.zip</file_name>
+    <file_name>ngp_downloader.0.4.4.zip</file_name>
     <icon>https://raw.githubusercontent.com/matself/ngp-downloader/main/ngp_downloader/icon.png</icon>
     <author_name>Mats Elfström</author_name>
-    <download_url>https://github.com/matself/ngp-downloader/releases/download/v0.4.3/ngp_downloader.0.4.3.zip</download_url>
+    <download_url>https://github.com/matself/ngp-downloader/releases/download/v0.4.4/ngp_downloader.0.4.4.zip</download_url>
     <uploaded_by>Mats Elfström</uploaded_by>
     <experimental>True</experimental>
     <deprecated>False</deprecated>
