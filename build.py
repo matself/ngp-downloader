@@ -4,7 +4,7 @@
     python build.py --base-url file:///S:/qgis-plugins
 
 The zip holds only committed files (git archive), so commit before building.
-Output: dist/ngp_downloader-<version>.zip and plugins.xml in the repo root.
+Output: dist/ngp_downloader.<version>.zip and plugins.xml in the repo root.
 """
 
 from __future__ import annotations
@@ -30,7 +30,9 @@ def read_metadata() -> dict[str, str]:
 def build_zip(version: str) -> Path:
     dist = ROOT / "dist"
     dist.mkdir(exist_ok=True)
-    zip_path = dist / f"{PLUGIN_DIR}-{version}.zip"
+    # "<package>.<version>.zip": QGIS takes the plugin folder name from the file
+    # name up to the first dot, so a dash here breaks installs from plugins.xml.
+    zip_path = dist / f"{PLUGIN_DIR}.{version}.zip"
     subprocess.run(
         [
             "git", "archive", "--format=zip", f"--prefix={PLUGIN_DIR}/",

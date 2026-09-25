@@ -8,10 +8,10 @@
     <qgis_maximum_version>4.99</qgis_maximum_version>
     <supports_qt6>True</supports_qt6>
     <homepage>https://github.com/matself/ngp-downloader</homepage>
-    <file_name>ngp_downloader-0.4.2.zip</file_name>
+    <file_name>ngp_downloader.0.4.2.zip</file_name>
     <icon>https://raw.githubusercontent.com/matself/ngp-downloader/main/ngp_downloader/icon.png</icon>
     <author_name>Mats Elfström</author_name>
-    <download_url>https://github.com/matself/ngp-downloader/releases/download/v0.4.2/ngp_downloader-0.4.2.zip</download_url>
+    <download_url>https://github.com/matself/ngp-downloader/releases/download/v0.4.2/ngp_downloader.0.4.2.zip</download_url>
     <uploaded_by>Mats Elfström</uploaded_by>
     <experimental>True</experimental>
     <deprecated>False</deprecated>

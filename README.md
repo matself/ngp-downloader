@@ -120,10 +120,10 @@ Alternativt: hämta zip-filen under [Releases](https://github.com/matself/ngp-do
 ## Ny version
 
 1. Höj `version` i `ngp_downloader/metadata.txt` och committa.
-2. `python build.py` – skapar `dist/ngp_downloader-<version>.zip` och uppdaterar `plugins.xml`.
+2. `python build.py` – skapar `dist/ngp_downloader.<version>.zip` och uppdaterar `plugins.xml`.
 3. Committa `plugins.xml`, pusha och skapa releasen:
    ```
-   gh release create v<version> dist/ngp_downloader-<version>.zip --title "v<version>"
+   gh release create v<version> dist/ngp_downloader.<version>.zip --title "v<version>"
    ```
 
 För en intern källa, t.ex. en nätverksdisk: `python build.py --base-url file:///S:/qgis-plugins` och kopiera zip-filen och `plugins.xml` dit.
