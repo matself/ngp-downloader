@@ -6,7 +6,7 @@ The plugin is independent and not developed by Lantmäteriet. "Lantmäteriet" in
 
 The user interface is in Swedish; see [User interface](#user-interface) below for an English explanation of every dialog and label. There is also a full [Swedish user guide](docs/anvandning.md) covering the whole workflow, from login to download, and troubleshooting.
 
-> Status: experimental. Strandskydd, Detaljplan, Byggnad, Kulturhistorisk lämning and Gräns för fjällnära skog have been tested against the API. Översiktsplan, Geoteknisk markundersökning and Stompunkt still return 404 (not yet published).
+> Strandskydd, Detaljplan, Byggnad, Kulturhistorisk lämning and Gräns för fjällnära skog have been tested against the API. Översiktsplan, Geoteknisk markundersökning and Stompunkt still return 404 (not yet published).
 
 ## How it works
 
@@ -180,12 +180,8 @@ Restart QGIS, enable *NGP Downloader (Lantmäteriet)* under Plugins (Instickspro
 
 ## Install
 
-The plugin is not in the official plugin repository. Instead, add this repository as a plugin source in QGIS:
-
-1. *Plugins → Manage and Install Plugins → Settings → Add…*
-2. URL: `https://raw.githubusercontent.com/matself/ngp-downloader/main/plugins.xml`
-3. Check *Show also experimental plugins* (the plugin is marked experimental).
-4. Search for *NGP Downloader (Lantmäteriet)* and install. New versions then show up as regular updates.
+1. *Plugins → Manage and Install Plugins*
+2. Search for *NGP Downloader (Lantmäteriet)* and install.
 
 Alternatively: download the zip file from [Releases](https://github.com/matself/ngp-downloader/releases) and use *Install from ZIP*.
 

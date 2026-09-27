@@ -4,6 +4,11 @@ All notable changes to NGP Downloader (Lantmäteriet) are documented in this fil
 
 ## [Unreleased]
 
+## [1.0.0]
+- First stable release, published to the official QGIS plugin repository
+- Dropped the "not in the official plugin repository" install instructions from the README
+- No longer marked experimental
+
 ## [0.4.5]
 - Added a user guide, linked from the README ([docs/anvandning.md](docs/anvandning.md))
 
@@ -42,7 +47,8 @@ All notable changes to NGP Downloader (Lantmäteriet) are documented in this fil
 - Renamed plugin to "NGP nedladdning" and added build script
 - Initial QGIS plugin skeleton for NGP downloads
 
-[Unreleased]: https://github.com/matself/ngp-downloader/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/matself/ngp-downloader/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/matself/ngp-downloader/compare/v0.4.5...v1.0.0
 [0.4.5]: https://github.com/matself/ngp-downloader/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/matself/ngp-downloader/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/matself/ngp-downloader/compare/v0.4.2...v0.4.3
