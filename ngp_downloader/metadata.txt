@@ -2,15 +2,20 @@
 name=NGP Downloader (Lantmäteriet)
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
-supportsQt6=True
-description=Sök och hämta referensobjekt från Nationella geodataplattformen (NGP)
-about=Fristående plugin, inte utvecklat av Lantmäteriet. Söker i Lantmäteriets Geodatakatalog (NGP) och sparar datamängder som Detaljplan, Strandskydd och Kulturhistorisk lämning som GeoPackage med färdig stil: detaljplaner som plankartor enligt Boverkets allmänna råd BFS 2020:6, strandskydd som i NGP:s kartvisning och lämningar som i Fornsök. Hämtar även plankartor och andra resurser, samt Riksantikvarieämbetets öppna lämningsregister. NGP kräver egen inloggning via Lantmäteriet; autentisering sker via QGIS inbyggda autentiseringshanterare (OAuth2).
+description=Search and download reference objects from Sweden's National Geodata Platform (NGP)
+about=Independent plugin, not developed by Lantmäteriet (the Swedish mapping, cadastral and land registration authority). Searches Lantmäteriet's Geodata Catalogue (NGP, National Geodata Platform) and saves datasets such as Detaljplan (detailed development plan), Strandskydd (shoreline protection) and Kulturhistorisk lämning (cultural heritage site) as GeoPackage with a ready-made style: development plans styled as plan maps per Boverket's general guidelines BFS 2020:6, shoreline protection styled as in NGP's own map view, and heritage sites styled as in Fornsök (the Swedish National Heritage Board's search service). Also downloads plan maps and other linked resources, plus the Swedish National Heritage Board's (Riksantikvarieämbetet) open register of heritage sites. NGP requires its own login via Lantmäteriet, obtained through Geotorget; authentication uses QGIS' built-in authentication manager (OAuth2). Covers datasets from Sweden only. The user interface is in Swedish; see the README on the repository for an English explanation of every dialog and label.
 version=0.4.5
 author=Mats Elfström
 email=mats.elfstrom@gmail.com
 category=Web
 icon=icon.png
-tags=ngp,lantmäteriet,stac,strandskydd,detaljplan,sverige
+tags=ngp,lantmäteriet,stac,detaljplan,strandskydd,sweden,geodata,spatial planning,shoreline protection,cultural heritage
+changelog=0.4.5: Added a user guide, linked from the README
+    0.4.4: Show the "not affiliated with Lantmäteriet" independence note in the panel UI
+    0.4.3: Renamed to NGP Downloader (Lantmäteriet), clarified independence; release zip named <package>.<version>.zip
+    0.4.2: Show NGP download progress as an object count
+    0.4.1: Documented where to get NGP credentials
+    0.4.0: Added RAÄ lämningsregister (heritage site register) as a download source
 license=GPL-2.0-or-later
 experimental=True
 deprecated=False
