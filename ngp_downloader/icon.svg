@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <!-- Stacked map layers with a download arrow -->
-  <g stroke="#17466f" stroke-width="2.5" stroke-linejoin="round">
-    <polygon points="5,48 32,35 59,48 32,61" fill="#a9cbea"/>
-    <polygon points="5,41 32,28 59,41 32,54" fill="#5b9bd5"/>
-    <polygon points="5,34 32,21 59,34 32,47" fill="#2e75b6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <rect x="1" y="1" width="22" height="22" rx="3" fill="#0d47a1"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.8" stroke-width="0.55" stroke-linejoin="round">
+    <path d="M12 4 18 7 12 10 6 7Z"/>
+    <path d="M6 8.6 12 11.6 18 8.6"/>
+    <path d="M6 10.2 12 13.2 18 10.2"/>
   </g>
-  <path d="M27.5,3 h9 v14 h8 l-12.5,14 l-12.5,-14 h8 z"
-        fill="#f39c26" stroke="#8a4b00" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M12 14v5.2m0 0l-2.6-2.6M12 19.2l2.6-2.6" stroke="#ffffff" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="6" y="20.6" width="12" height="1.6" fill="#ffffff"/>
 </svg>
