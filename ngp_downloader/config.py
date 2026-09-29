@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-PLUGIN_NAME = "NGP Downloader (Lantmäteriet)"
+PLUGIN_NAME = "Geodata: NGP (Lantmäteriet)"
 SETTINGS_PREFIX = "ngp_downloader"
 
 # All NGP reference objects default to SWEREF 99 TM (not WGS 84 as in plain STAC).
