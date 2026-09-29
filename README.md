@@ -1,4 +1,4 @@
-# NGP Downloader (Lantmäteriet)
+# Geodata: NGP (Lantmäteriet)
 
 QGIS plugin to search and download reference objects from Lantmäteriet's **National Geodata Platform (NGP)** — Strandskydd (shoreline protection), Detaljplan (development plan), Översiktsplan (comprehensive plan) and more — and save them as GeoPackage.
 
@@ -79,7 +79,7 @@ The user interface is in Swedish. This section explains it in English so the plu
 
 ### Main panel (dock widget)
 
-Opened from the *Web* menu and the *Web* toolbar, entry *NGP Downloader (Lantmäteriet)*. Lets you pick an authentication, a dataset and subsets, an optional area filter, then download the dataset as GeoPackage; and fetch linked resources (documents, plan maps) for the active layer.
+Opened from the *Web* menu and the *Web* toolbar, entry *Geodata: NGP (Lantmäteriet)*. Lets you pick an authentication, a dataset and subsets, an optional area filter, then download the dataset as GeoPackage; and fetch linked resources (documents, plan maps) for the active layer.
 
 | Swedish label | English meaning | What it does |
 |---|---|---|
@@ -107,7 +107,7 @@ Opened from the *Web* menu and the *Web* toolbar, entry *NGP Downloader (Lantmä
 | Hämtar… (följ förloppet i aktivitetshanteraren) | Fetching… (follow progress in the Task Manager) |
 | Hämtningen misslyckades: {error} | Download failed: {error} |
 | En resurshämtning pågår redan. | A resource download is already running. |
-| Välj ett lager hämtat med NGP Downloader (Lantmäteriet). | Select a layer fetched with NGP Downloader (Lantmäteriet). |
+| Välj ett lager hämtat med Geodata: NGP (Lantmäteriet). | Select a layer fetched with Geodata: NGP (Lantmäteriet). |
 | Resurshämtningen misslyckades: {error} | Resource download failed: {error} |
 | Hämtar {n} resurser… (följ förloppet i aktivitetshanteraren) | Fetching {n} resources… (follow progress in the Task Manager) |
 | {n} filer från Riksantikvarieämbetet (uppdateras varje natt). | {n} files from the Swedish National Heritage Board (updated nightly). |
@@ -176,12 +176,12 @@ Link the plugin folder into the QGIS profile (run in `cmd` as administrator, or 
 mklink /J "%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\ngp_downloader" "C:\GITHUB\ngp-downloader\ngp_downloader"
 ```
 
-Restart QGIS, enable *NGP Downloader (Lantmäteriet)* under Plugins (Insticksprogram). *Plugin Reloader* is handy during development. Logs go to the *NGP Downloader (Lantmäteriet)* tab in the log panel.
+Restart QGIS, enable *Geodata: NGP (Lantmäteriet)* under Plugins (Insticksprogram). *Plugin Reloader* is handy during development. Logs go to the *Geodata: NGP (Lantmäteriet)* tab in the log panel.
 
 ## Install
 
 1. *Plugins → Manage and Install Plugins*
-2. Search for *NGP Downloader (Lantmäteriet)* and install.
+2. Search for *Geodata: NGP (Lantmäteriet)* and install.
 
 Alternatively: download the zip file from [Releases](https://github.com/matself/ngp-downloader/releases) and use *Install from ZIP*.
 

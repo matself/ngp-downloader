@@ -4,13 +4,15 @@ qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 description=Search and download reference objects from Sweden's National Geodata Platform (NGP)
 about=Independent plugin, not developed by Lantmäteriet (the Swedish mapping, cadastral and land registration authority). Searches Lantmäteriet's Geodata Catalogue (NGP, National Geodata Platform) and saves datasets such as Detaljplan (detailed development plan), Strandskydd (shoreline protection) and Kulturhistorisk lämning (cultural heritage site) as GeoPackage with a ready-made style: development plans styled as plan maps per Boverket's general guidelines BFS 2020:6, shoreline protection styled as in NGP's own map view, and heritage sites styled as in Fornsök (the Swedish National Heritage Board's search service). Also downloads plan maps and other linked resources, plus the Swedish National Heritage Board's (Riksantikvarieämbetet) open register of heritage sites. NGP requires its own login via Lantmäteriet, obtained through Geotorget; authentication uses QGIS' built-in authentication manager (OAuth2). Covers datasets from Sweden only. The user interface is in Swedish; see the README on the repository for an English explanation of every dialog and label.
-version=1.0.0
+version=1.0.1
 author=Mats Elfström
 email=mats.elfstrom@gmail.com
 category=Web
 icon=icon.png
 tags=ngp,lantmäteriet,stac,detaljplan,strandskydd,sweden,geodata,spatial planning,shoreline protection,cultural heritage
-changelog=1.0.0: First stable release, published to the official QGIS plugin repository
+changelog=1.0.1: Renamed to "Geodata: NGP (Lantmäteriet)" with a new icon,
+    part of a shared naming/icon scheme across the four Lantmäteriet plugins.
+    1.0.0: First stable release, published to the official QGIS plugin repository
     0.4.5: Added a user guide, linked from the README
     0.4.4: Show the "not affiliated with Lantmäteriet" independence note in the panel UI
     0.4.3: Renamed to NGP Downloader (Lantmäteriet), clarified independence; release zip named <package>.<version>.zip

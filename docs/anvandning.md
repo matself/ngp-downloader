@@ -5,7 +5,7 @@
 > [det här repots ärenden](https://github.com/matself/ngp-downloader/issues), inte till Lantmäteriets support. Data hämtas
 > från Lantmäteriets tjänster och omfattas av deras användningsvillkor.
 
-NGP Downloader (Lantmäteriet) hämtar referensobjekt från Lantmäteriets **Nationella geodataplattform (NGP)**, till exempel
+Geodata: NGP (Lantmäteriet) hämtar referensobjekt från Lantmäteriets **Nationella geodataplattform (NGP)**, till exempel
 Strandskydd, Detaljplan och Byggnad, och sparar dem som GeoPackage. Här finns också en datamängd med lämningar från
 Riksantikvarieämbetet. Den här sidan går igenom hela flödet och vad man gör när något inte fungerar.
 
@@ -34,7 +34,7 @@ konto av typen *Geodataprodukter*.
 
 ## 1. Skapa en inloggning
 
-1. Öppna panelen via webbmenyn (*Webb → NGP Downloader (Lantmäteriet)*) eller ikonen i verktygsfältet.
+1. Öppna panelen via webbmenyn (*Webb → Geodata: NGP (Lantmäteriet)*) eller ikonen i verktygsfältet.
 2. Under **Anslutning**, välj **Miljö**: *Produktion* eller *Verifikation*. Verifikation är Lantmäteriets testmiljö.
 3. Väljaren **Autentisering** är QGIS egen. Välj en befintlig konfiguration (OAuth 2, API-header med
    `Authorization: Bearer …` eller Basic), eller klicka på **Ny Lantmäteriet-inloggning…**.
@@ -180,9 +180,9 @@ området du vill ha.
 **Objekt saknas i resultatet.** Objekt utan geometri tas bort när du använder geografiskt filter eller attributfilter. Se
 avsnittet *Avgränsa geografiskt*.
 
-**"Välj ett lager hämtat med NGP Downloader (Lantmäteriet)".** Resurshämtningen kräver att det aktiva lagret har kolumnen
+**"Välj ett lager hämtat med Geodata: NGP (Lantmäteriet)".** Resurshämtningen kräver att det aktiva lagret har kolumnen
 `assets`, alltså att det kommer från en hämtning med pluginet.
 
 **Inloggningen frågar efter huvudlösenord.** QGIS skyddar autentiseringsdatabasen. Ange ditt huvudlösenord.
 
-Loggmeddelanden hittar du i QGIS *Loggmeddelanden*-panel, under fliken *NGP Downloader (Lantmäteriet)*.
+Loggmeddelanden hittar du i QGIS *Loggmeddelanden*-panel, under fliken *Geodata: NGP (Lantmäteriet)*.

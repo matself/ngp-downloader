@@ -4,6 +4,10 @@ All notable changes to NGP Downloader (Lantmäteriet) are documented in this fil
 
 ## [Unreleased]
 
+## [1.0.1]
+- Renamed to "Geodata: NGP (Lantmäteriet)" with a new icon, part of a
+  shared naming/icon scheme across the four Lantmäteriet plugins
+
 ## [1.0.0]
 - First stable release, published to the official QGIS plugin repository
 - Dropped the "not in the official plugin repository" install instructions from the README
