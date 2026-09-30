@@ -1,16 +1,16 @@
 <?xml version='1.0' encoding='utf-8'?>
 <plugins>
-  <pyqgis_plugin name="Geodata: NGP (Lantmäteriet)" version="1.0.1" plugin_id="ngp_downloader">
+  <pyqgis_plugin name="Geodata: NGP (Lantmäteriet)" version="1.0.2" plugin_id="ngp_downloader">
     <description>Search and download reference objects from Sweden's National Geodata Platform (NGP)</description>
     <about>Independent plugin, not developed by Lantmäteriet (the Swedish mapping, cadastral and land registration authority). Searches Lantmäteriet's Geodata Catalogue (NGP, National Geodata Platform) and saves datasets such as Detaljplan (detailed development plan), Strandskydd (shoreline protection) and Kulturhistorisk lämning (cultural heritage site) as GeoPackage with a ready-made style: development plans styled as plan maps per Boverket's general guidelines BFS 2020:6, shoreline protection styled as in NGP's own map view, and heritage sites styled as in Fornsök (the Swedish National Heritage Board's search service). Also downloads plan maps and other linked resources, plus the Swedish National Heritage Board's (Riksantikvarieämbetet) open register of heritage sites. NGP requires its own login via Lantmäteriet, obtained through Geotorget; authentication uses QGIS' built-in authentication manager (OAuth2). Covers datasets from Sweden only. The user interface is in Swedish; see the README on the repository for an English explanation of every dialog and label.</about>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <qgis_minimum_version>3.34</qgis_minimum_version>
     <qgis_maximum_version>4.99</qgis_maximum_version>
     <homepage>https://github.com/matself/ngp-downloader</homepage>
-    <file_name>ngp_downloader.1.0.1.zip</file_name>
+    <file_name>ngp_downloader.1.0.2.zip</file_name>
     <icon>https://raw.githubusercontent.com/matself/ngp-downloader/main/ngp_downloader/icon.png</icon>
     <author_name>Mats Elfström</author_name>
-    <download_url>https://github.com/matself/ngp-downloader/releases/download/v1.0.1/ngp_downloader.1.0.1.zip</download_url>
+    <download_url>https://github.com/matself/ngp-downloader/releases/download/v1.0.2/ngp_downloader.1.0.2.zip</download_url>
     <uploaded_by>Mats Elfström</uploaded_by>
     <experimental>False</experimental>
     <deprecated>False</deprecated>
