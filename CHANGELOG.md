@@ -5,9 +5,7 @@ All notable changes to Geodata: NGP (Lantmäteriet) are documented in this file.
 ## [Unreleased]
 
 ## [1.0.2]
-- Dropped the plugins.qgis.org-published install instructions - install
-  from the release zip for now, pending (re-)listing on the official
-  plugins.qgis.org repository under the new name
+- Install from the release zip for now
 
 ## [1.0.1]
 - Renamed to "Geodata: NGP (Lantmäteriet)" with a new icon, part of a
