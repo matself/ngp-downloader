@@ -180,10 +180,8 @@ Restart QGIS, enable *Geodata: NGP (Lantmäteriet)* under Plugins (Insticksprogr
 
 ## Install
 
-1. *Plugins → Manage and Install Plugins*
-2. Search for *Geodata: NGP (Lantmäteriet)* and install.
-
-Alternatively: download the zip file from [Releases](https://github.com/matself/ngp-downloader/releases) and use *Install from ZIP*.
+Download the zip file from [Releases](https://github.com/matself/ngp-downloader/releases) and use
+*Plugins → Manage and Install Plugins → Install from ZIP*.
 
 ## New release
 
