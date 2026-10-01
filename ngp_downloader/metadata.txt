@@ -10,7 +10,7 @@ email=mats.elfstrom@gmail.com
 category=Web
 icon=icon.png
 tags=ngp,lantmäteriet,stac,detaljplan,strandskydd,sweden,geodata,spatial planning,shoreline protection,cultural heritage
-changelog=1.0.2: Install from the release zip for now.
+changelog=1.0.2: Removed the install instructions from the README.
     1.0.1: Renamed to "Geodata: NGP (Lantmäteriet)" with a new icon,
     part of a shared naming/icon scheme across the four Lantmäteriet plugins.
     1.0.0: First stable release, published to the official QGIS plugin repository

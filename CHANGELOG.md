@@ -5,7 +5,7 @@ All notable changes to Geodata: NGP (Lantmäteriet) are documented in this file.
 ## [Unreleased]
 
 ## [1.0.2]
-- Install from the release zip for now
+- Removed the install instructions from the README
 
 ## [1.0.1]
 - Renamed to "Geodata: NGP (Lantmäteriet)" with a new icon, part of a

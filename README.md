@@ -178,11 +178,6 @@ mklink /J "%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\ngp_downloader" 
 
 Restart QGIS, enable *Geodata: NGP (Lantmäteriet)* under Plugins (Insticksprogram). *Plugin Reloader* is handy during development. Logs go to the *Geodata: NGP (Lantmäteriet)* tab in the log panel.
 
-## Install
-
-Download the zip file from [Releases](https://github.com/matself/ngp-downloader/releases) and use
-*Plugins → Manage and Install Plugins → Install from ZIP*.
-
 ## New release
 
 1. Bump `version` in `ngp_downloader/metadata.txt`, update `changelog=` there and in `CHANGELOG.md`, and commit.
