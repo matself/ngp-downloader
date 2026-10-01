@@ -4,6 +4,9 @@ All notable changes to Geodata: NGP (Lantmäteriet) are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.3]
+- Moved the toolbar icon and menu entry from the Web toolbar/menu to the Plugins toolbar/menu
+
 ## [1.0.2]
 - Removed the install instructions from the README
 

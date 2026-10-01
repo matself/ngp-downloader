@@ -24,8 +24,8 @@ class NgpDownloaderPlugin:
         self.action = QAction(icon, PLUGIN_NAME, self.iface.mainWindow())
         self.action.setCheckable(True)
         self.action.toggled.connect(self._toggle_dock)
-        self.iface.addWebToolBarIcon(self.action)
-        self.iface.addPluginToWebMenu(PLUGIN_NAME, self.action)
+        self.iface.addToolBarIcon(self.action)
+        self.iface.addPluginToMenu(PLUGIN_NAME, self.action)
 
     def unload(self) -> None:
         if self.dock:
@@ -33,8 +33,8 @@ class NgpDownloaderPlugin:
             self.dock.deleteLater()
             self.dock = None
         if self.action:
-            self.iface.removeWebToolBarIcon(self.action)
-            self.iface.removePluginWebMenu(PLUGIN_NAME, self.action)
+            self.iface.removeToolBarIcon(self.action)
+            self.iface.removePluginMenu(PLUGIN_NAME, self.action)
             self.action = None
 
     def _toggle_dock(self, checked: bool) -> None:
