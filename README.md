@@ -1,3 +1,5 @@
+<img src="ngp_downloader/icon.png" alt="" width="72" align="right">
+
 # Geodata: NGP (Lantmäteriet)
 
 QGIS plugin to search and download reference objects from Lantmäteriet's **National Geodata Platform (NGP)** — Strandskydd (shoreline protection), Detaljplan (development plan), Översiktsplan (comprehensive plan) and more — and save them as GeoPackage.
