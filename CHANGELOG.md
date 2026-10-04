@@ -4,6 +4,9 @@ All notable changes to Geodata: NGP (Lantmäteriet) are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.4]
+- Tags are now English only (lantmateriet without diacritics, Swedish terms replaced)
+
 ## [1.0.3]
 - Moved the toolbar icon and menu entry from the Web toolbar/menu to the Plugins toolbar/menu
 
