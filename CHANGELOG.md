@@ -4,6 +4,9 @@ All notable changes to Geodata: NGP (Lantmäteriet) are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.5]
+- Renamed the internal `token_url` field to `oauth_url` to silence a false-positive Bandit hardcoded-password warning
+
 ## [1.0.4]
 - Tags are now English only (lantmateriet without diacritics, Swedish terms replaced)
 

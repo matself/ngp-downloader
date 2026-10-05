@@ -19,7 +19,7 @@ class Environment:
     key: str
     label: str
     api_url: str
-    token_url: str
+    oauth_url: str
 
 
 ENVIRONMENTS = {
@@ -27,13 +27,13 @@ ENVIRONMENTS = {
         key="production",
         label="Produktion",
         api_url="https://api.lantmateriet.se",
-        token_url="https://apimanager.lantmateriet.se/oauth2/token",
+        oauth_url="https://apimanager.lantmateriet.se/oauth2/token",
     ),
     "verification": Environment(
         key="verification",
         label="Verifikation",
         api_url="https://api-ver.lantmateriet.se",
-        token_url="https://apimanager-ver.lantmateriet.se/oauth2/token",
+        oauth_url="https://apimanager-ver.lantmateriet.se/oauth2/token",
     ),
 }
 DEFAULT_ENVIRONMENT = "production"

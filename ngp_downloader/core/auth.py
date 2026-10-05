@@ -36,7 +36,7 @@ def create_client_credentials_config(
         "configType": _CONFIG_TYPE_CUSTOM,
         "grantFlow": _GRANT_FLOW_CLIENT_CREDENTIALS,
         "name": name,
-        "tokenUrl": ENVIRONMENTS[env_key].token_url,
+        "tokenUrl": ENVIRONMENTS[env_key].oauth_url,
         "clientId": client_id,
         "clientSecret": client_secret,
         "accessMethod": _ACCESS_METHOD_HEADER,
