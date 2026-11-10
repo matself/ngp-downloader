@@ -73,6 +73,7 @@ class NgpDock(QDockWidget):
         self.filter_edits: dict[str, QLineEdit] = {}
         self._task: DownloadTask | None = None
         self._resource_task: ResourceTask | None = None
+        self.open_viewer = None  # set by the plugin: shows Planvisaren
         self._raa: RaaDownload | None = None
 
         body = QWidget()
@@ -174,17 +175,28 @@ class NgpDock(QDockWidget):
         return group
 
     def _build_resource_group(self) -> QGroupBox:
-        group = QGroupBox("Resurser")
-        layout = QVBoxLayout(group)
+        # Folded away by default: Planvisaren fetches a plan's documents itself, so
+        # this is for bulk downloads and for datasets that have resources but no viewer.
+        group = QGroupBox("Avancerat: hämta resurser i bulk")
+        group.setCheckable(True)
+        group.setChecked(False)
+        body = QWidget()
+        layout = QVBoxLayout(body)
+        layout.setContentsMargins(0, 0, 0, 0)
         hint = QLabel(
             "Domänobjekt och dokument (t.ex. plankarta, beslut) för objekten i det "
-            "aktiva lagret. Markera objekt först för att bara hämta för dem."
+            "aktiva lagret. Markera objekt först för att bara hämta för dem. "
+            "Dokument för en enskild detaljplan hämtar du enklare i Planvisaren."
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
         self.resource_btn = QPushButton("Hämta resurser för aktivt lager…")
         self.resource_btn.clicked.connect(self._start_resources)
         layout.addWidget(self.resource_btn)
+        outer = QVBoxLayout(group)
+        outer.addWidget(body)
+        body.setVisible(False)
+        group.toggled.connect(body.setVisible)
         return group
 
     # --- settings --------------------------------------------------------
@@ -443,6 +455,17 @@ class NgpDock(QDockWidget):
             if suffix.split("_")[0] in hidden:
                 node.setItemVisibilityChecked(False)
         self._message(f"{count} objekt sparade i {gpkg_path}", Qgis.MessageLevel.Success)
+        if dataset.id == PLAN_TYPE and self.open_viewer:
+            self._offer_viewer()
+
+    def _offer_viewer(self) -> None:
+        """A message-bar button that opens Planvisaren, the tool for reading the plans just fetched."""
+        bar = self.iface.messageBar()
+        item = bar.createMessage(PLUGIN_NAME, "Klicka i kartan i Planvisaren för att läsa planernas bestämmelser.")
+        button = QPushButton("Öppna Planvisare")
+        button.clicked.connect(lambda: (self.open_viewer(), bar.popWidget(item)))
+        item.layout().addWidget(button)
+        bar.pushWidget(item, Qgis.MessageLevel.Info, 15)
 
     def _on_failed(self, error: str) -> None:
         self._message(f"Hämtningen misslyckades: {error}", Qgis.MessageLevel.Critical)

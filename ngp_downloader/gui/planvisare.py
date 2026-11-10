@@ -39,6 +39,7 @@ class PlanvisareDock(QDockWidget):
         self.canvas = iface.mapCanvas()
         self._result: Identification | None = None
         self._tasks: list[ResourceTask] = []
+        self._auth_hint_shown = False
 
         self.tool = QgsMapToolEmitPoint(self.canvas)
         self.tool.canvasClicked.connect(self._on_click)
@@ -119,6 +120,17 @@ class PlanvisareDock(QDockWidget):
         for plan in self._result.plans:
             if plan.domain is not None and plan.detail is None:
                 self._fetch_detail(plan, self._result)
+        if self._result.plans and not self._auth_hint_shown and not self._has_auth() and any(p.detail is None for p in self._result.plans):
+            self._auth_hint_shown = True  # once is enough
+            self._message(
+                "Välj en autentisering i NGP-panelen för att se planens fullständiga bestämmelser "
+                "(användning med tillhörande egenskaper) och kunna öppna dokument.",
+                Qgis.MessageLevel.Info,
+            )
+
+    @staticmethod
+    def _has_auth() -> bool:
+        return authcfg_exists(QgsSettings().value(f"{SETTINGS_PREFIX}/authcfg", ""))
 
     def _fetch_detail(self, plan: PlanInfo, result: Identification) -> None:
         """Fetch the plan's domain object in the background; the flat view stays until it arrives."""

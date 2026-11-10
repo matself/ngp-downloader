@@ -72,5 +72,6 @@ class NgpDownloaderPlugin:
 
             self.dock = NgpDock(self.iface, self.iface.mainWindow())
             self.dock.visibilityChanged.connect(self.action.setChecked)
+            self.dock.open_viewer = lambda: self.viewer_action.setChecked(True)
             self.iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock)
         self.dock.setVisible(checked)
