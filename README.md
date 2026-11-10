@@ -39,7 +39,7 @@ When a style exists at `styles/{dataset}_{layer}.qml`, it is applied when the la
 - `anvandning` (use): colour from `planbestammelse_farg` (70% transparency), use boundary and notation (`B`, `BC`, `GATA` …). Combinations are merged into one polygon with the colour of the first notation.
 - Provisions of the same type with exactly the same polygon in the same plan are merged into one object (`antal_bestammelser`, provision count), so one polygon gets one label (`BC`, `b e f h o p`). The provision texts are kept, joined with ` + `.
 - `egenskap_*` (property): property boundary without fill, notation in italics (`e`, `p` …). Provisions denoted by symbol are drawn as raster fills from the `planbestammelse_symbol` column: dot pattern, cross pattern, rings (floor structures, structures below ground) and combinations.
-- `plan`: plan area boundary. `administrativ` (administrative) is hidden by default.
+- `plan`: plan area boundary. `administrativ` (administrative provisions, e.g. implementation time and utility easements).
 
 BFS 2020:6 gives the colours as names, not values. The palette is modelled on Lantmäteriet's own map and lives in `tools/make_detaljplan_styles.py`, which rebuilds the QML files (run with QGIS Python).
 

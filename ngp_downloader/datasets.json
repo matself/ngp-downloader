@@ -31,7 +31,7 @@
       "filters": [],
       "layer_types": [
         { "typ": "användningsbestämmelse", "name": "anvandning", "label": "Användning" },
-        { "typ": "administrativ bestämmelse", "name": "administrativ", "hidden": true, "label": "Administrativ" },
+        { "typ": "administrativ bestämmelse", "name": "administrativ", "label": "Administrativ" },
         { "typ": "egenskapsbestämmelse", "name": "egenskap", "label": "Egenskap" },
         { "typ": "detaljplan", "name": "plan", "label": "Plan" }
       ]

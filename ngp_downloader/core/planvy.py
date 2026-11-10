@@ -194,7 +194,8 @@ def provisions_of(feature: QgsFeature) -> tuple[list[Provision], bool]:
 
 def _strip_placeholders(text: str) -> str:
     """Drop template markers such as ' [text]' or ' [laga kraft:text]' from a wording."""
-    return re.sub(r"\s*\[[^\]]*\]", "", text).strip()
+    text = re.sub(r"\s*\[[^\]]*\]", "", text)
+    return re.sub(r"\s+([.,;:])", r"\1", text).strip()
 
 
 def _type_rank(type_name: str) -> tuple[int, str]:

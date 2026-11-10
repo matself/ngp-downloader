@@ -121,7 +121,7 @@ en etikett. Bestämmelsetexterna behålls sammanfogade med ` + `.
 
 För Detaljplan, Strandskydd och Kulturhistorisk lämning läggs en färdig stil på lagret och sparas som standardstil i
 GeoPackage-filen, så filen öppnas med stil även utan pluginet. Stilarna följer Boverkets allmänna råd BFS 2020:6, NGP:s egen
-WMS respektive Fornsök. Lagret *administrativ* (Detaljplan) är avslaget från början.
+WMS respektive Fornsök.
 
 Det generella strandskyddet (100 m från strandlinjen) är i regel inte inritat. Att en plats saknar yta betyder alltså inte
 att strandskydd saknas.

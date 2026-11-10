@@ -234,7 +234,7 @@ def main() -> None:
              {"name": "circle", "color": INK, "outline_style": "no", "size": "1.3"})),
          label_settings(beteckning, LABEL_PROPERTY, 5000, italic=True))
 
-    # Administrativ: hidden by default; dashed violet outline.
+    # Administrativ: dashed violet outline.
     admin = QgsLineSymbol.createSimple({"line_color": "#7a4a9a", "line_width": "0.4", "line_style": "dash"})
     save("MultiPolygon", "detaljplan_administrativ", QgsSingleSymbolRenderer(outline_only(admin)),
          label_settings(beteckning, LABEL_PROPERTY, 5000, italic=True))
