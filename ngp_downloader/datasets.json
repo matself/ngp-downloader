@@ -25,22 +25,23 @@
     {
       "id": "detaljplan",
       "title": "Detaljplan",
+      "group_label": "Detaljplaner",
       "version": "v2",
       "verified": true,
       "filters": [],
       "layer_types": [
-        { "typ": "användningsbestämmelse", "name": "anvandning" },
-        { "typ": "administrativ bestämmelse", "name": "administrativ", "hidden": true },
-        { "typ": "egenskapsbestämmelse", "name": "egenskap" },
-        { "typ": "detaljplan", "name": "plan" }
+        { "typ": "användningsbestämmelse", "name": "anvandning", "label": "Användning" },
+        { "typ": "administrativ bestämmelse", "name": "administrativ", "hidden": true, "label": "Administrativ" },
+        { "typ": "egenskapsbestämmelse", "name": "egenskap", "label": "Egenskap" },
+        { "typ": "detaljplan", "name": "plan", "label": "Plan" }
       ]
     },
-    { "id": "oversiktsplan", "title": "Översiktsplan", "version": "v1", "verified": false, "filters": [] },
-    { "id": "byggnad", "title": "Byggnad", "version": "v1", "verified": true, "filters": [] },
-    { "id": "kulturhistorisklamning", "title": "Kulturhistorisk lämning", "version": "v1", "verified": true, "filters": [] },
+    { "id": "oversiktsplan", "title": "Översiktsplan", "group_label": "Översiktsplaner", "version": "v1", "verified": false, "filters": [] },
+    { "id": "byggnad", "title": "Byggnad", "group_label": "Byggnader", "version": "v1", "verified": true, "filters": [] },
+    { "id": "kulturhistorisklamning", "title": "Kulturhistorisk lämning", "group_label": "Kulturhistoriska lämningar", "version": "v1", "verified": true, "filters": [] },
     { "id": "gransforfjallnaraskog", "title": "Gräns för fjällnära skog", "version": "v1", "verified": true, "filters": [] },
-    { "id": "geotekniskmarkundersokning", "title": "Geoteknisk markundersökning", "version": "v1", "verified": false, "filters": [] },
-    { "id": "stompunkt", "title": "Stompunkt", "version": "v1", "verified": false, "filters": [] },
+    { "id": "geotekniskmarkundersokning", "title": "Geoteknisk markundersökning", "group_label": "Geotekniska markundersökningar", "version": "v1", "verified": false, "filters": [] },
+    { "id": "stompunkt", "title": "Stompunkt", "group_label": "Stompunkter", "version": "v1", "verified": false, "filters": [] },
     {
       "id": "raa_lamningar",
       "title": "Lämningar (RAÄ, hela registret)",

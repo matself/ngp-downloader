@@ -41,7 +41,7 @@ from qgis.PyQt.QtWidgets import (
 from ..config import DEFAULT_ENVIRONMENT, ENVIRONMENTS, NGP_CRS, PLUGIN_NAME, SETTINGS_PREFIX, search_base_url
 from ..core.auth import authcfg_exists
 from ..core.client import NgpClient, NgpError
-from ..core.registry import Dataset, load_datasets
+from ..core.registry import Dataset, group_name, layer_label, load_datasets
 from ..core.raa import HIDDEN_SUFFIXES as RAA_HIDDEN_SUFFIXES
 from ..core.raa import RaaDownload, RaaFile, layers_in, list_files
 from ..core.resources import ResourceTask, is_downloadable, parse_assets
@@ -275,6 +275,7 @@ class NgpDock(QDockWidget):
         for label, c in sorted(labelled, key=lambda lc: lc[0].lower()):
             item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, c["id"])
+            item.setData(Qt.ItemDataRole.UserRole + 1, c.get("title") or c["id"])  # for the group name
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Unchecked)
             self.collection_list.addItem(item)
@@ -359,13 +360,15 @@ class NgpDock(QDockWidget):
         self._save_settings()
 
         dataset = self._dataset()
-        layer_name = f"{dataset.id}_{datetime.now():%Y%m%d_%H%M%S}"
+        now = datetime.now()
+        layer_name = f"{dataset.id}_{now:%Y%m%d_%H%M%S}"
+        group = group_name(dataset, self._checked_area_names(), self._fallback_area(body), now)
         type_names = {t.typ: t.name for t in dataset.layer_types}
         task = DownloadTask(
             self._base_url(), authcfg, body, Path(self.output_widget.filePath()), layer_name, type_names
         )
         task.completed.connect(
-            lambda gpkg, names, count: self._on_completed(gpkg, names, count, dataset, layer_name)
+            lambda gpkg, names, count: self._on_completed(gpkg, names, count, dataset, layer_name, group)
         )
         task.status.connect(lambda text, t=task: self._on_task_status(t, f"{dataset.title}: {text}"))
         task.failed.connect(self._on_failed)
@@ -375,6 +378,23 @@ class NgpDock(QDockWidget):
         self.download_btn.setEnabled(False)
         self.status_label.setText("Hämtar… (följ förloppet i aktivitetshanteraren)")
         QgsApplication.taskManager().addTask(task)
+
+    def _checked_area_names(self) -> list[str]:
+        """Titles of the checked subsets, e.g. "Kristianstads kommun"."""
+        return [
+            self.collection_list.item(i).data(Qt.ItemDataRole.UserRole + 1)
+            for i in range(self.collection_list.count())
+            if self.collection_list.item(i).checkState() == Qt.CheckState.Checked
+        ]
+
+    @staticmethod
+    def _fallback_area(body: dict) -> str:
+        """Group name part for a search without chosen subsets."""
+        if "bbox" in body:
+            return "kartutsnitt"
+        if "intersects" in body:
+            return "urval"
+        return "hela landet"
 
     def _on_task_status(self, task: DownloadTask, text: str) -> None:
         self.status_label.setText(text)
@@ -386,7 +406,7 @@ class NgpDock(QDockWidget):
         self.download_btn.setEnabled(True)
 
     def _on_completed(
-        self, gpkg_path: str, layer_names: list, count: int, dataset: Dataset, base_name: str
+        self, gpkg_path: str, layer_names: list, count: int, dataset: Dataset, base_name: str, group: str
     ) -> None:
         # Style every layer first: saving a style writes to the GeoPackage, and
         # doing that while the canvas renders an already added layer from the
@@ -397,12 +417,13 @@ class NgpDock(QDockWidget):
             if layer.isValid():
                 suffix = layer_name[len(base_name) + 1:]
                 apply_style(layer, dataset.id, suffix)
+                layer.setName(layer_label(dataset, suffix) or group)
                 layers.append((suffix, layer))
 
         project = QgsProject.instance()
         root = project.layerTreeRoot()
         # Several layers from one download go into a group named after it.
-        parent = root.insertGroup(0, base_name) if len(layers) > 1 else root
+        parent = root.insertGroup(0, group) if len(layers) > 1 else root
         hidden = {t.name for t in dataset.layer_types if t.hidden}
         for suffix, layer in layers:
             project.addMapLayer(layer, False)
