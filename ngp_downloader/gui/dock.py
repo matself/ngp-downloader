@@ -15,6 +15,7 @@ from qgis.core import (
     QgsFeatureRequest,
     QgsField,
     QgsGeometry,
+    QgsLayerTreeGroup,
     QgsProject,
     QgsSettings,
     QgsVectorLayer,
@@ -41,6 +42,7 @@ from qgis.PyQt.QtWidgets import (
 from ..config import DEFAULT_ENVIRONMENT, ENVIRONMENTS, NGP_CRS, PLUGIN_NAME, SETTINGS_PREFIX, search_base_url
 from ..core.auth import authcfg_exists
 from ..core.client import NgpClient, NgpError
+from ..core.planvy import PLAN_TYPE, layer_type
 from ..core.registry import Dataset, group_name, layer_label, load_datasets
 from ..core.raa import HIDDEN_SUFFIXES as RAA_HIDDEN_SUFFIXES
 from ..core.raa import RaaDownload, RaaFile, layers_in, list_files
@@ -451,9 +453,12 @@ class NgpDock(QDockWidget):
         if self._resource_task is not None:
             self._message("En resurshämtning pågår redan.", Qgis.MessageLevel.Warning)
             return
-        layer = self.iface.activeLayer()
-        if not isinstance(layer, QgsVectorLayer) or "assets" not in layer.fields().names():
-            self._message(f"Välj ett lager hämtat med {PLUGIN_NAME}.", Qgis.MessageLevel.Warning)
+        layer = self._resource_layer()
+        if layer is None:
+            self._message(
+                f"Markera ett lager hämtat med {PLUGIN_NAME} i lagerträdet (en grupp räknas bara om den innehåller ett sådant lager).",
+                Qgis.MessageLevel.Warning,
+            )
             return
         authcfg = self._authcfg_or_warn()
         if not authcfg:
@@ -494,6 +499,23 @@ class NgpDock(QDockWidget):
         self.resource_btn.setEnabled(False)
         self.status_label.setText(f"Hämtar {len(resources)} resurser… (följ förloppet i aktivitetshanteraren)")
         QgsApplication.taskManager().addTask(task)
+
+    def _resource_layer(self) -> QgsVectorLayer | None:
+        """The active layer if it carries NGP assets; if a layer group is selected instead,
+        the group's plan layer (detaljplan) or else its first layer with assets."""
+
+        def has_assets(layer) -> bool:
+            return isinstance(layer, QgsVectorLayer) and "assets" in layer.fields().names()
+
+        layer = self.iface.activeLayer()
+        if has_assets(layer):
+            return layer
+        node = self.iface.layerTreeView().currentNode()
+        if not isinstance(node, QgsLayerTreeGroup):
+            return None
+        candidates = [n.layer() for n in node.findLayers() if has_assets(n.layer())]
+        plan = next((c for c in candidates if layer_type(c) == PLAN_TYPE), None)
+        return plan or (candidates[0] if candidates else None)
 
     def _clear_resource_task(self) -> None:
         self._resource_task = None

@@ -102,7 +102,7 @@ def _is_plan_data(layer: Any) -> bool:
     return TYPE_FIELD in names and PLAN_ID_FIELD in names
 
 
-def _layer_type(layer: QgsVectorLayer) -> str | None:
+def layer_type(layer: QgsVectorLayer) -> str | None:
     """`feature_typ` of the layer's first feature; a layer holds one type."""
     request = QgsFeatureRequest().setLimit(1).setFlags(QgsFeatureRequest.Flag.NoGeometry)
     feature = next(layer.getFeatures(request), None)
@@ -115,10 +115,10 @@ def find_layers(project: QgsProject | None = None) -> tuple[list[QgsVectorLayer]
     for layer in (project or QgsProject.instance()).mapLayers().values():
         if not _is_plan_data(layer):
             continue
-        layer_type = _layer_type(layer)
-        if layer_type == PLAN_TYPE:
+        kind = layer_type(layer)
+        if kind == PLAN_TYPE:
             plans.append(layer)
-        elif layer_type:
+        elif kind:
             provisions.append(layer)
     return plans, provisions
 
