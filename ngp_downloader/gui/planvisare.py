@@ -21,7 +21,7 @@ from qgis.PyQt.QtWidgets import (
 
 from ..config import PLUGIN_NAME, SETTINGS_PREFIX
 from ..core.auth import authcfg_exists
-from ..core.planvy import Identification, PlanInfo, identify, render_html
+from ..core.planvy import Identification, PlanInfo, documents_dir, identify, load_detail, render_html
 from ..core.resources import ResourceTask, is_downloadable
 
 HIGHLIGHT_COLOR = "#e64a19"
@@ -116,6 +116,28 @@ class PlanvisareDock(QDockWidget):
         if self._result.highlight:
             self.rubber.setToGeometry(QgsGeometry.collectGeometry(self._result.highlight), None)
         self._render()
+        for plan in self._result.plans:
+            if plan.domain is not None and plan.detail is None:
+                self._fetch_detail(plan, self._result)
+
+    def _fetch_detail(self, plan: PlanInfo, result: Identification) -> None:
+        """Fetch the plan's domain object in the background; the flat view stays until it arrives."""
+        authcfg = QgsSettings().value(f"{SETTINGS_PREFIX}/authcfg", "")
+        if not authcfg_exists(authcfg):
+            return
+        task = ResourceTask(authcfg, [plan.domain], self._documents_dir(plan))
+        task.completed.connect(lambda paths, _failures, p=plan, r=result: self._on_detail(p, r, paths))
+        task.taskCompleted.connect(lambda t=task: self._tasks.remove(t) if t in self._tasks else None)
+        self._tasks.append(task)
+        QgsApplication.taskManager().addTask(task)
+
+    def _on_detail(self, plan: PlanInfo, result: Identification, paths: dict) -> None:
+        path = paths.get(plan.domain.href)
+        if not path or result is not self._result:  # failed, or the user has clicked elsewhere since
+            return
+        plan.detail = load_detail(path)
+        if plan.detail:
+            self._render()
 
     def _colors(self) -> dict[str, str]:
         palette = self.browser.palette()
@@ -172,10 +194,7 @@ class PlanvisareDock(QDockWidget):
     @staticmethod
     def _documents_dir(plan: PlanInfo) -> Path:
         """Next to the GeoPackage, like the plugin's other resource downloads."""
-        if plan.gpkg_path and Path(plan.gpkg_path).is_file():
-            gpkg = Path(plan.gpkg_path)
-            return gpkg.parent / f"{gpkg.stem}_resurser"
-        return Path(tempfile.gettempdir()) / "ngp_planvisare"
+        return documents_dir(plan, Path(tempfile.gettempdir()) / "ngp_planvisare")
 
     def _on_document(self, document, paths: dict, failures: list) -> None:
         path = paths.get(document.href)

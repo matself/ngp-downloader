@@ -16,6 +16,7 @@ import html
 import json
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from qgis.core import (
@@ -33,7 +34,7 @@ from qgis.core import (
 )
 
 from .planbestammelser import COUNT_FIELD, ORIGINAL_FIELDS, ORIGINALS_FIELD
-from .resources import Resource, parse_assets
+from .resources import MANIFEST_NAME, Resource, parse_assets
 
 TYPE_FIELD = "feature_typ"
 PLAN_ID_FIELD = "detaljplan_objektidentitet"
@@ -67,6 +68,24 @@ class TypeGroup:
 
 
 @dataclass
+class UseNode:
+    """A use provision with the property and administrative provisions that regulate it."""
+
+    use: Provision
+    children: list[tuple[str, Provision]] = field(default_factory=list)  # (feature type, provision)
+
+
+@dataclass
+class PlanDetail:
+    """What the plan's domain object adds to the flat layers: purpose, decision, hierarchy."""
+
+    purpose: str = ""
+    decision: list[str] = field(default_factory=list)
+    uses: list[UseNode] = field(default_factory=list)
+    loose: list[tuple[str, Provision]] = field(default_factory=list)  # regulate no use
+
+
+@dataclass
 class PlanInfo:
     plan_id: str
     name: str
@@ -76,6 +95,9 @@ class PlanInfo:
     documents: list[Resource]
     groups: list[TypeGroup]
     gpkg_path: str | None  # where the plan layer is stored, for saving documents next to it
+    domain: Resource | None = None  # the plan's domain object, if the data offers one
+    at_point_ids: set[str] = field(default_factory=set)  # provisions that apply at the clicked point
+    detail: PlanDetail | None = None  # parsed domain object, once fetched
 
 
 @dataclass
@@ -239,6 +261,7 @@ def identify(
                     documents=_documents(attrs.get("assets")),
                     groups=[],
                     gpkg_path=source,
+                    domain=_domain_resource(attrs.get("assets")),
                 )
             )
 
@@ -264,7 +287,112 @@ def identify(
                         geometry.transform(QgsCoordinateTransform(layer.crs(), highlight_crs, QgsProject.instance()))
                     result.highlight.append(geometry)
         plan.groups = [groups[t] for t in sorted(groups, key=_type_rank)]
+        plan.at_point_ids = {p.id for g in plan.groups for p in g.at_point if p.id}
+        plan.detail = cached_detail(plan)
     return result
+
+
+# --- the plan's domain object ----------------------------------------------
+
+def _domain_resource(assets: Any) -> Resource | None:
+    return next((r for r in parse_assets(assets) if r.role in HIDDEN_DOCUMENT_ROLES), None)
+
+
+def documents_dir(plan: PlanInfo, fallback: Path) -> Path:
+    """Where a plan's downloads go: next to its GeoPackage, else `fallback`."""
+    if plan.gpkg_path and Path(plan.gpkg_path).is_file():
+        gpkg = Path(plan.gpkg_path)
+        return gpkg.parent / f"{gpkg.stem}_resurser"
+    return fallback
+
+
+def cached_detail(plan: PlanInfo) -> PlanDetail | None:
+    """The domain object if it was fetched before (the download manifest knows where)."""
+    if plan.domain is None or not plan.gpkg_path:
+        return None
+    folder = documents_dir(plan, Path())
+    if folder == Path():
+        return None
+    try:
+        manifest = json.loads((folder / MANIFEST_NAME).read_text(encoding="utf-8"))
+        return load_detail(folder / manifest[plan.domain.href])
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def load_detail(path: Path | str) -> PlanDetail | None:
+    try:
+        return parse_domain(json.loads(Path(path).read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return None
+
+
+def _domain_provision(props: dict[str, Any]) -> Provision:
+    text = _strip_placeholders(props.get("bestammelseformulering") or "")
+    category = " · ".join(
+        v for v in (props.get("kategori"), props.get("underkategori")) if isinstance(v, str) and v and v.lower() != text.lower()
+    )
+    return Provision(
+        id=str(props.get("objektidentitet") or ""),
+        form=(props.get("anvandningsform") or "").capitalize(),
+        text=text,
+        category=category,
+    )
+
+
+def parse_domain(data: Any) -> PlanDetail | None:
+    """Parse a detaljplan domain object (GeoJSON FeatureCollection); None if it is not one."""
+    if not isinstance(data, dict) or not isinstance(data.get("features"), list):
+        return None
+    detail = PlanDetail()
+    uses: dict[str, UseNode] = {}
+    regulating: list[tuple[str, dict[str, Any]]] = []
+    found_plan = False
+    for feature in data["features"]:
+        props = feature.get("properties") if isinstance(feature, dict) else None
+        if not isinstance(props, dict):
+            continue
+        kind = str(props.get("feature:typ") or "").lower()
+        if kind == PLAN_TYPE:
+            found_plan = True
+            detail.purpose = props.get("syfte") or ""
+            detail.decision = _decision_lines(props.get("beslutsinformation"))
+        elif kind == TYPE_ORDER[0]:
+            node = UseNode(_domain_provision(props))
+            uses[node.use.id] = node
+        elif kind:
+            regulating.append((kind, props))
+    if not found_plan:
+        return None
+    for kind, props in regulating:
+        provision = _domain_provision(props)
+        targets = props.get("reglerarAnvandningsbestammelse")
+        parents = [uses[t] for t in targets if t in uses] if isinstance(targets, list) else []
+        for node in parents:
+            node.children.append((kind, provision))
+        if not parents:
+            detail.loose.append((kind, provision))
+    detail.uses = list(uses.values())
+    return detail
+
+
+def _decision_lines(info: Any) -> list[str]:
+    """Short 'label: value' lines from the plan's beslutsinformation."""
+    if not isinstance(info, list) or not info or not isinstance(info[0], dict):
+        return []
+    entry = info[0]
+    force = entry.get("datumLagakraft")
+    force = force[0] if isinstance(force, list) and force else force
+    time = f"{entry['genomforandetid']} månader" if entry.get("genomforandetid") else None
+    pairs = [
+        ("Beslut", entry.get("beslutstyp")),
+        ("Antagen", entry.get("datumAntagande")),
+        ("Laga kraft", force),
+        ("Genomförandetid", time),
+        ("Instans", entry.get("instansInomKommunen")),
+        ("Diarienummer", entry.get("diarienummerKommun")),
+    ]
+    return [f"{label}: {value}" for label, value in pairs if value]
 
 
 # --- presentation ----------------------------------------------------------
@@ -332,6 +460,11 @@ def _render_plan(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[s
             )
         out.append(f'<p style="color:{colors["muted"]}; margin-bottom:2px;">Länkar</p><p>{"&nbsp;&nbsp; ".join(links)}</p>')
 
+    if plan.detail:
+        out.append(_render_detail(plan, show_all, colors))
+        out.append(f'<hr style="color:{colors["border"]};">')
+        return "".join(out)
+
     for group in plan.groups:
         shown = group.in_plan if show_all else group.at_point
         if not shown:
@@ -357,4 +490,58 @@ def _render_plan(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[s
             )
         out.append("</table>")
     out.append(f'<hr style="color:{colors["border"]};">')
+    return "".join(out)
+
+
+def _render_detail(plan: PlanInfo, show_all: bool, colors: dict[str, str]) -> str:
+    """Purpose, decision and the provisions nested under the use they regulate."""
+    detail = plan.detail
+    border, muted = colors["border"], colors["muted"]
+    out = []
+    if detail.purpose:
+        out.append(f'<p style="color:{muted}; margin-bottom:2px;">Syfte</p><p>{_esc(detail.purpose)}</p>')
+    if detail.decision:
+        out.append(
+            f'<p style="color:{muted}; margin-bottom:2px;">Beslut</p><p>'
+            + "<br>".join(_esc(line) for line in detail.decision)
+            + "</p>"
+        )
+    here = plan.at_point_ids
+
+    def provision_row(provision: Provision) -> str:
+        lines = [_esc(provision.text)]
+        if provision.category:
+            lines.append(f'<span style="color:{muted};">{_esc(provision.category)}</span>')
+        return f'<tr><td style="border-bottom:1px solid {border};">{"<br>".join(lines)}</td></tr>'
+
+    def section(children: list[tuple[str, Provision]]) -> str:
+        parts = []
+        by_type: dict[str, list[Provision]] = {}
+        for kind, provision in children:
+            by_type.setdefault(kind, []).append(provision)
+        for kind in sorted(by_type, key=_type_rank):
+            items = by_type[kind]
+            shown = items if show_all else [p for p in items if p.id in here]
+            if not shown:
+                continue
+            heading = HEADINGS.get(kind, kind.capitalize())
+            parts.append(
+                f'<p style="margin-bottom:2px;"><b>{_esc(heading)}</b> '
+                f'<span style="color:{muted};">{sum(p.id in here for p in items)} av {len(items)} st</span></p>'
+                f'<table width="100%" cellspacing="0" cellpadding="5" style="border:1px solid {border};">'
+                + "".join(provision_row(p) for p in shown)
+                + "</table>"
+            )
+        return "".join(parts)
+
+    for node in detail.uses:
+        body = section(node.children)
+        if not show_all and node.use.id not in here and not body:
+            continue
+        title = " &ndash; ".join(_esc(v) for v in (node.use.form, node.use.text) if v)
+        category = f'<p style="color:{muted}; margin-top:0;">{_esc(node.use.category)}</p>' if node.use.category else ""
+        out.append(f'<h3 style="margin-bottom:4px;">{title}</h3>{category}{body}')
+    other = section(detail.loose)
+    if other:
+        out.append(f'<h3 style="margin-bottom:4px;">Utan särskild användning</h3>{other}')
     return "".join(out)
