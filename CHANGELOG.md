@@ -3,6 +3,11 @@
 All notable changes to Geodata: NGP (Lantmäteriet) are documented in this file.
 
 ## [Unreleased]
+- New tool **Planvisare** (plan viewer): a detachable dock with its own toolbar icon that shows plan content from downloaded detaljplan layers at a clicked point, similar to Lantmäteriet's plan viewer; fetches the plan's domain object (with an authentication) to show purpose, decision details and provisions nested under their use
+- Merged provisions keep their originals as JSON in `bestammelser_json`
+- Layer groups are named "Detaljplaner <area> <date>" with short layer names, collapsed in the layer tree; the administrative layer is visible by default
+- The bulk resource download is folded under "Advanced"; the resource button also works when a layer group is selected
+- A message offers to open the Planvisare after a detaljplan download
 
 ## [1.0.5]
 - Renamed the internal `token_url` field to `oauth_url` to silence a false-positive Bandit hardcoded-password warning

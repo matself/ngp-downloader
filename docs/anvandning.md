@@ -34,7 +34,7 @@ konto av typen *Geodataprodukter*.
 
 ## 1. Skapa en inloggning
 
-1. Öppna panelen via webbmenyn (*Webb → Geodata: NGP (Lantmäteriet)*) eller ikonen i verktygsfältet.
+1. Öppna panelen via Plugins-menyn (*Plugins → Geodata: NGP (Lantmäteriet)*) eller ikonen i verktygsfältet.
 2. Under **Anslutning**, välj **Miljö**: *Produktion* eller *Verifikation*. Verifikation är Lantmäteriets testmiljö.
 3. Väljaren **Autentisering** är QGIS egen. Välj en befintlig konfiguration (OAuth 2, API-header med
    `Authorization: Bearer …` eller Basic), eller klicka på **Ny Lantmäteriet-inloggning…**.
@@ -115,7 +115,7 @@ API och sparar den i QGIS-profilen i 30 dagar. Den ger extra kolumner:
 * `planbestammelse_etikett`, beteckningen, eller för höjdsymboler ett värde som `nh 9` (nockhöjd)
 
 Bestämmelser av samma typ med exakt samma yta i samma plan slås ihop till ett objekt (`antal_bestammelser`), så att en yta får
-en etikett. Bestämmelsetexterna behålls sammanfogade med ` + `.
+en etikett. De ursprungliga bestämmelserna sparas som JSON i kolumnen `bestammelser_json`, så inget går förlorat vid sammanslagningen.
 
 ### Stilar
 
@@ -126,12 +126,34 @@ WMS respektive Fornsök.
 Det generella strandskyddet (100 m från strandlinjen) är i regel inte inritat. Att en plats saknar yta betyder alltså inte
 att strandskydd saknas.
 
-## 5. Hämta resurser (dokument och domänobjekt)
+## 5. Planvisaren
+
+Planvisaren är ett eget verktyg i pluginet, med egen ikon i verktygsfältet. Den visar innehållet i hämtade detaljplaner på ett
+sätt som liknar Lantmäteriets plantjänst. Den läser lagren i projektet, så den fungerar även på en plan du hämtat tidigare och
+sparat i ett QGIS-projekt. Dockan kan dras ut ur QGIS-fönstret, till exempel till en andra skärm.
+
+1. Hämta Detaljplan som vanligt. Efter hämtningen finns en knapp **Öppna Planvisare** i meddelandefältet, eller klicka på
+   Planvisare-ikonen.
+2. Klicka i kartan. Planerna på platsen visas med namn, beteckning, beslutsinformation och länkar till dokument (plankarta,
+   planbeskrivning med mera). Ett klick på en länk hämtar dokumentet och öppnar det.
+3. Bestämmelserna visas grupperade, med antal ("3 av 10 st": 3 gäller på platsen av 10 i planen). Bocka i **Visa alla
+   bestämmelser i planen** för att se alla. Planens avgränsning markeras i kartan.
+
+Med en vald autentisering i NGP-panelen hämtar Planvisaren planens domänobjekt i bakgrunden (en liten fil per plan, sparad i
+`<geopackage>_resurser/`). Då visas även planens syfte och beslutsuppgifter (beslutstyp, datum, genomförandetid, diarienummer),
+och egenskaps- och administrativa bestämmelser visas under den användning de gäller för. Utan autentisering, eller om hämtningen
+misslyckas, visas en enklare vy som bygger enbart på GeoPackage-filen.
+
+## 6. Hämta resurser i bulk (dokument och domänobjekt)
+
+Det här är för dig som vill ha filer för många objekt på en gång, eller för datamängder som har resurser men ingen visare.
+Planvisaren hämtar en enskild plans dokument själv, så vanligtvis behöver du inte detta. Gruppen **Avancerat: hämta resurser i
+bulk** är hopfälld i panelen: bocka i den för att visa knappen.
 
 Objekten pekar på domänobjekt och dokument som plankarta, planbeskrivning och beslut. Du hämtar dem så här:
 
 1. Gör lagret från din hämtning aktivt. Markera gärna de objekt du vill hämta för.
-2. Klicka **Hämta resurser för aktivt lager…** under *Resurser*.
+2. Klicka **Hämta resurser för aktivt lager…** i gruppen *Avancerat*.
 3. I dialogen väljer du **Endast valda objekt** eller **Alla objekt**, och vilka **resurstyper** (roller) du vill ha. Listan visar
    antal filer och storlek för varje.
 4. Klicka **Hämta**.

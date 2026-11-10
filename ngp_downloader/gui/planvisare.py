@@ -120,7 +120,8 @@ class PlanvisareDock(QDockWidget):
         for plan in self._result.plans:
             if plan.domain is not None and plan.detail is None:
                 self._fetch_detail(plan, self._result)
-        if self._result.plans and not self._auth_hint_shown and not self._has_auth() and any(p.detail is None for p in self._result.plans):
+        missing_detail = any(p.detail is None for p in self._result.plans)
+        if missing_detail and not self._auth_hint_shown and not self._has_auth():
             self._auth_hint_shown = True  # once is enough
             self._message(
                 "Välj en autentisering i NGP-panelen för att se planens fullständiga bestämmelser "
@@ -197,7 +198,9 @@ class PlanvisareDock(QDockWidget):
             return
         task = ResourceTask(authcfg, [document], self._documents_dir(plan))
         task.completed.connect(lambda paths, failures, d=document: self._on_document(d, paths, failures))
-        task.failed.connect(lambda error: self._message(f"Kunde inte hämta dokumentet: {error}", Qgis.MessageLevel.Critical))
+        task.failed.connect(
+            lambda error: self._message(f"Kunde inte hämta dokumentet: {error}", Qgis.MessageLevel.Critical)
+        )
         task.taskCompleted.connect(lambda t=task: self._tasks.remove(t) if t in self._tasks else None)
         self._tasks.append(task)  # keep a reference while the task runs
         QgsApplication.taskManager().addTask(task)

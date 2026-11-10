@@ -330,7 +330,9 @@ def load_detail(path: Path | str) -> PlanDetail | None:
 def _domain_provision(props: dict[str, Any]) -> Provision:
     text = _strip_placeholders(props.get("bestammelseformulering") or "")
     category = " · ".join(
-        v for v in (props.get("kategori"), props.get("underkategori")) if isinstance(v, str) and v and v.lower() != text.lower()
+        v
+        for v in (props.get("kategori"), props.get("underkategori"))
+        if isinstance(v, str) and v and v.lower() != text.lower()
     )
     return Provision(
         id=str(props.get("objektidentitet") or ""),
@@ -458,7 +460,8 @@ def _render_plan(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[s
                 f'<a href="doc:{plan_index}:{doc_index}" style="color:{colors["accent"]};">'
                 f'&#8595; {_esc(document.title)}</a>'
             )
-        out.append(f'<p style="color:{colors["muted"]}; margin-bottom:2px;">Länkar</p><p>{"&nbsp;&nbsp; ".join(links)}</p>')
+        joined = "&nbsp;&nbsp; ".join(links)
+        out.append(f'<p style="color:{colors["muted"]}; margin-bottom:2px;">Länkar</p><p>{joined}</p>')
 
     if plan.detail:
         out.append(_render_detail(plan, show_all, colors))

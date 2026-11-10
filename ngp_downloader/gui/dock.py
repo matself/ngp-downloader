@@ -479,7 +479,8 @@ class NgpDock(QDockWidget):
         layer = self._resource_layer()
         if layer is None:
             self._message(
-                f"Markera ett lager hämtat med {PLUGIN_NAME} i lagerträdet (en grupp räknas bara om den innehåller ett sådant lager).",
+                f"Markera ett lager hämtat med {PLUGIN_NAME} i lagerträdet "
+                "(en grupp räknas bara om den innehåller ett sådant lager).",
                 Qgis.MessageLevel.Warning,
             )
             return

@@ -37,7 +37,7 @@ Source: Boverket, Planbestämmelsekatalogen (the provision catalogue).
 When a style exists at `styles/{dataset}_{layer}.qml`, it is applied when the layer is added, and saved as the default style in the GeoPackage file so the file opens styled even without the plugin. Detaljplan follows Boverket's general guidelines BFS 2020:6:
 
 - `anvandning` (use): colour from `planbestammelse_farg` (70% transparency), use boundary and notation (`B`, `BC`, `GATA` …). Combinations are merged into one polygon with the colour of the first notation.
-- Provisions of the same type with exactly the same polygon in the same plan are merged into one object (`antal_bestammelser`, provision count), so one polygon gets one label (`BC`, `b e f h o p`). The provision texts are kept, joined with ` + `.
+- Provisions of the same type with exactly the same polygon in the same plan are merged into one object (`antal_bestammelser`, provision count), so one polygon gets one label (`BC`, `b e f h o p`). The original provisions are kept as JSON in the `bestammelser_json` column (id, wording, notation, category per provision), so nothing is lost by the merge; the [Planvisare](#planvisare-plan-viewer) reads them from there.
 - `egenskap_*` (property): property boundary without fill, notation in italics (`e`, `p` …). Provisions denoted by symbol are drawn as raster fills from the `planbestammelse_symbol` column: dot pattern, cross pattern, rings (floor structures, structures below ground) and combinations.
 - `plan`: plan area boundary. `administrativ` (administrative provisions, e.g. implementation time and utility easements).
 
@@ -47,9 +47,18 @@ BFS 2020:6 gives the colours as names, not values. The palette is modelled on La
 
 **Kulturhistorisk lämning** (cultural heritage site): styled as in Fornsök (the Swedish National Heritage Board's search service) — ancient monuments (fornlämning) as a bright orange symbol with the rune ᚱ and red polygons (70% transparency) and lines, other cultural heritage sites as a petrol-blue symbol with Φ and blue outlines, other statuses grey with ◇. Polygons and lines get the symbol at their centre. As in Fornsök's own defaults, former and non-heritage sites are unchecked in the layer panel and site numbers (label from 1:5000 scale) are off; everything can be switched on. The symbols are embedded SVG and need no font.
 
+### Planvisare (plan viewer)
+
+A second tool in the plugin, with its own toolbar icon and dock (*Planvisare*), shows the content of the downloaded detaljplan layers in a form similar to Lantmäteriet's plan viewer. It reads the GeoPackage layers in the project, so it also works on a plan downloaded earlier and saved in a QGIS project. The dock can be pulled out of the QGIS window.
+
+- Click in the map: the plans at that point are listed with name, designation (beteckning), decision information and document links (plan map, plan description and so on, fetched on click through the plugin's authentication).
+- Provisions are grouped by use, and under each use its property and administrative provisions, with a count "N av M st" (N apply at the point, M in the whole plan). *Visa alla bestämmelser i planen* shows all of them. The plan outline is highlighted in the map.
+- With an authentication selected, the viewer fetches the plan's domain object in the background (one small file per plan, kept in `{geopackage}_resurser/`). It adds the plan purpose and decision details (decision type, dates, implementation time, case number) and the real hierarchy: each property and administrative provision is listed under the use it regulates (`reglerarAnvandningsbestammelse`). Without an authentication, or if the fetch fails, the viewer shows the flat view built from the GeoPackage alone.
+- Layers are identified by their fields (`feature_typ`, `detaljplan_objektidentitet`), not by name, so they can be renamed freely.
+
 ### Resources
 
-*Hämta resurser för aktivt lager…* ("Fetch resources for active layer…") downloads what `assets` points to via NGP's download API — domain objects and documents such as plan maps, plan descriptions and decisions. Which roles exist is read from the data, so it works for any dataset without dataset-specific code.
+The *Avancerat: hämta resurser i bulk* ("Advanced: fetch resources in bulk") group in the main panel is folded away by default, because the Planvisare fetches a single plan's documents itself. *Hämta resurser för aktivt lager…* ("Fetch resources for active layer…") downloads what `assets` points to via NGP's download API — domain objects and documents such as plan maps, plan descriptions and decisions. Which roles exist is read from the data, so it works for any dataset without dataset-specific code.
 
 - Each file is fetched once even if many objects point to it (one detaljplan = one domain object for all its provisions).
 - Four files are fetched in parallel; already-fetched files are skipped (`resurser.json` in the folder keeps track of them).
@@ -81,7 +90,7 @@ The user interface is in Swedish. This section explains it in English so the plu
 
 ### Main panel (dock widget)
 
-Opened from the *Web* menu and the *Web* toolbar, entry *Geodata: NGP (Lantmäteriet)*. Lets you pick an authentication, a dataset and subsets, an optional area filter, then download the dataset as GeoPackage; and fetch linked resources (documents, plan maps) for the active layer.
+Opened from the *Plugins* menu and toolbar, entry *Geodata: NGP (Lantmäteriet)*. Lets you pick an authentication, a dataset and subsets, an optional area filter, then download the dataset as GeoPackage; and fetch linked resources (documents, plan maps) for the active layer.
 
 | Swedish label | English meaning | What it does |
 |---|---|---|
@@ -94,6 +103,7 @@ Opened from the *Web* menu and the *Web* toolbar, entry *Geodata: NGP (Lantmäte
 | Geografisk avgränsning | Geographic extent | Group box for the area filter |
 | Kartans utsträckning | Map extent | Option to limit the search to the current map canvas extent |
 | Hämta | Download / Fetch | Starts the download (main panel), or fetch action in other dialogs (see below) |
+| Avancerat: hämta resurser i bulk | Advanced: fetch resources in bulk | Checkable group, folded by default; tick it to show the resource button |
 | Hämta resurser för aktivt lager… | Fetch resources for active layer… | Opens the [resource dialog](#fetch-resources-dialog) for the currently active NGP layer |
 
 ### Messages (main panel)
@@ -112,11 +122,29 @@ Opened from the *Web* menu and the *Web* toolbar, entry *Geodata: NGP (Lantmäte
 | Välj ett lager hämtat med Geodata: NGP (Lantmäteriet). | Select a layer fetched with Geodata: NGP (Lantmäteriet). |
 | Resurshämtningen misslyckades: {error} | Resource download failed: {error} |
 | Hämtar {n} resurser… (följ förloppet i aktivitetshanteraren) | Fetching {n} resources… (follow progress in the Task Manager) |
+| Klicka i kartan i Planvisaren för att läsa planernas bestämmelser. | Click the map in the Planvisare to read the plans' provisions. (Shown after a detaljplan download, with the button *Öppna Planvisare* = Open Planvisare.) |
 | {n} filer från Riksantikvarieämbetet (uppdateras varje natt). | {n} files from the Swedish National Heritage Board (updated nightly). |
 | Hämta listan och välj minst en kommun eller ett län. | Fetch the list and select at least one municipality or county. |
 | Avbryt hämtning | Cancel download (button label while a download is running) |
 | RAÄ-hämtningen misslyckades: {error} | RAÄ download failed: {error} |
 | Lämningar från RAÄ hämtade: {names} | Heritage sites from RAÄ fetched: {names} |
+
+### Planvisare (plan viewer dock)
+
+Opened from the *Planvisare* toolbar icon or menu entry, or from the button in the message after a detaljplan download. Shows the plan provisions at a clicked point from the detaljplan layers in the project.
+
+| Swedish label | English meaning | What it does |
+|---|---|---|
+| Välj plats i kartan | Pick a location on the map | Activates the click tool (active while the dock is open) |
+| Visa alla bestämmelser i planen | Show all provisions in the plan | Lists every provision of the plan, not only those at the clicked point |
+| Klicka i kartan för att se vilka planbestämmelser som gäller på platsen. | Click the map to see which plan provisions apply at the location. | Start text |
+| Inga detaljplanslager i projektet. … | No detaljplan layers in the project. … | The project has no layers downloaded with this plugin |
+| Ingen detaljplan i de hämtade lagren på den klickade platsen. … | No detaljplan in the downloaded layers at the clicked location. … | Nothing found at the point; it does not mean there is no plan there |
+| Beteckning / Beslutsinformation / Länkar | Designation / Decision information / Links | Plan header; links download and open a document |
+| Syfte / Beslut | Purpose / Decision | Plan purpose and decision details (from the domain object) |
+| Användningsbestämmelser / Egenskapsbestämmelser / Administrativa bestämmelser | Use / Property / Administrative provisions | Provision groups; "N av M st" means N of M |
+| Välj en autentisering i NGP-panelen för att se planens fullständiga bestämmelser … | Select an authentication in the NGP panel to see the plan's full provisions … | Shown once when the domain object cannot be fetched |
+| Hämtar {dokument}… / Kunde inte hämta dokumentet | Fetching {document}… / Could not fetch the document | Document download status |
 
 ### New login dialog
 
