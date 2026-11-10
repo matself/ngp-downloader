@@ -156,6 +156,31 @@ def _join_beteckningar(values: list[str], spaced: bool) -> str | None:
     return ("" if not spaced and all(len(v) == 1 for v in unique) else " ").join(unique)
 
 
+# Columns copied into each original provision, so a merged feature can still be
+# shown as separate provisions (the merged columns join their texts with " + ").
+ORIGINAL_FIELDS = (
+    "ngp_id",
+    BETECKNING_FIELD,
+    ETIKETT_FIELD,
+    SYMBOL_FIELD,
+    FARG_FIELD,
+    VALUE_FIELD,
+    FORMULERING_FIELD,
+    "planbestammelse_anvandningsform",
+    "planbestammelse_kategori",
+    "planbestammelse_underkategori",
+)
+ORIGINALS_FIELD = "bestammelser_json"
+
+
+def _originals(group: list[dict[str, Any]]) -> str:
+    """JSON list with one entry per provision in the group, in group order."""
+    return json.dumps(
+        [{k: f["properties"].get(k) for k in ORIGINAL_FIELDS} for f in group],
+        ensure_ascii=False,
+    )
+
+
 def _merge(group: list[dict[str, Any]]) -> dict[str, Any]:
     # Alphabetical by notation; the first one's colour is used for the area
     # (BFS 2020:6 2.5: a combination is coloured with one of its uses' colours).
@@ -183,6 +208,7 @@ def _merge(group: list[dict[str, Any]]) -> dict[str, Any]:
                 " + ".join(str(v) for v in distinct) if distinct else None
             )
     merged[COUNT_FIELD] = len(group)
+    merged[ORIGINALS_FIELD] = _originals(group)
     return {"type": "Feature", "geometry": group[0]["geometry"], "properties": merged}
 
 
@@ -208,6 +234,7 @@ def merge_combinations(features: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for group in groups.values():
         if len(group) == 1:
             group[0]["properties"][COUNT_FIELD] = 1
+            group[0]["properties"][ORIGINALS_FIELD] = _originals(group)
     return [
         (_merge(groups[f]) if len(groups[f]) > 1 else groups[f][0]) if isinstance(f, tuple) else f
         for f in out
