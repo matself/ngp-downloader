@@ -407,6 +407,9 @@ class NgpDock(QDockWidget):
         for suffix, layer in layers:
             project.addMapLayer(layer, False)
             node = parent.insertLayer(0, layer)
+            # Layers with several style categories would otherwise open their
+            # whole legend and push the rest of the layer tree out of view.
+            node.setExpanded(False)
             if suffix.split("_")[0] in hidden:
                 node.setItemVisibilityChecked(False)
         self._message(f"{count} objekt sparade i {gpkg_path}", Qgis.MessageLevel.Success)
