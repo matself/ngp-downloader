@@ -275,21 +275,28 @@ class NgpDock(QDockWidget):
         for label, c in sorted(labelled, key=lambda lc: lc[0].lower()):
             item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, c["id"])
-            item.setData(Qt.ItemDataRole.UserRole + 1, c.get("title") or c["id"])  # for the group name
+            item.setData(Qt.ItemDataRole.UserRole + 1, self._collection_title(c))  # for the group name
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Unchecked)
             self.collection_list.addItem(item)
         self._message(f"{len(collections)} delmängder hämtade.")
 
     @staticmethod
-    def _collection_label(collection: dict) -> str:
-        """E.g. "Bodens kommun (2582)": many collections are titled with just their code."""
+    def _collection_title(collection: dict) -> str:
+        """E.g. "Bodens kommun": many collections are titled with just their code,
+        then the provider's name is used."""
         cid = collection["id"]
         title = collection.get("title") or cid
         if title == cid:
             providers = [p.get("name") for p in collection.get("providers", []) if p.get("name")]
             title = providers[0] if providers else cid
-        return title if title == cid else f"{title} ({cid})"
+        return title
+
+    @classmethod
+    def _collection_label(cls, collection: dict) -> str:
+        """E.g. "Bodens kommun (2582)"."""
+        title = cls._collection_title(collection)
+        return title if title == collection["id"] else f"{title} ({collection['id']})"
 
     def _filter_collection_list(self, text: str) -> None:
         text = text.lower()
