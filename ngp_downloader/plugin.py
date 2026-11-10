@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from qgis.core import QgsApplication
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QIcon
 
@@ -30,9 +29,10 @@ class NgpDownloaderPlugin:
         self.iface.addToolBarIcon(self.action)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.action)
 
-        self.viewer_action = QAction(
-            QgsApplication.getThemeIcon("/mActionIdentify.svg"), "Planvisare", self.iface.mainWindow()
-        )
+        # Same plate and layer stack as the downloader's icon, with a point marker
+        # instead of the download arrow: one plugin, two tools.
+        viewer_icon = QIcon(str(Path(__file__).resolve().parent / "icon_planvisare.svg"))
+        self.viewer_action = QAction(viewer_icon, "Planvisare", self.iface.mainWindow())
         self.viewer_action.setCheckable(True)
         self.viewer_action.toggled.connect(self._toggle_viewer)
         self.iface.addToolBarIcon(self.viewer_action)
