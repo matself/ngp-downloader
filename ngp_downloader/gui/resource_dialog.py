@@ -14,6 +14,7 @@ from qgis.PyQt.QtWidgets import (
     QVBoxLayout,
 )
 
+from ..core.planvy import PLAN_ID_FIELD
 from ..core.resources import summarize
 
 
@@ -37,14 +38,24 @@ class ResourceDialog(QDialog):
 
         selected = layer.selectedFeatureCount()
         self.selected_radio = QRadioButton(f"Endast valda objekt ({selected})")
-        self.all_radio = QRadioButton(f"Alla objekt ({layer.featureCount()})")
+        if not selected:
+            hint = QLabel(
+                "Inga objekt är markerade. Markera först planer i lagret med verktyget Markera objekt "
+                "(Ctrl+Skift+Alt+...) i verktygsfältet Attribut, eller i attributtabellen, och öppna sedan "
+                "den här dialogen igen."
+            )
+            hint.setWordWrap(True)
+            hint.setEnabled(False)
+        self.all_radio = QRadioButton(f"Alla objekt ({layer.featureCount()}){self._plan_note(layer)}")
         self.selected_radio.setEnabled(selected > 0)
         (self.selected_radio if selected else self.all_radio).setChecked(True)
         self.selected_radio.toggled.connect(self._refresh)
         layout.addWidget(self.selected_radio)
+        if not selected:
+            layout.addWidget(hint)
         layout.addWidget(self.all_radio)
 
-        layout.addWidget(QLabel("Hämta:"))
+        layout.addWidget(QLabel("Hämta (bocka i det du vill ha):"))
         self.role_list = QListWidget()
         self.role_list.itemChanged.connect(self._update_ok)
         layout.addWidget(self.role_list)
@@ -62,6 +73,15 @@ class ResourceDialog(QDialog):
         layout.addWidget(self.buttons)
 
         self._refresh()
+
+    @staticmethod
+    def _plan_note(layer: QgsVectorLayer) -> str:
+        """", i 298 planer": the files belong to plans, and a provision layer has many objects per plan."""
+        index = layer.fields().indexOf(PLAN_ID_FIELD)
+        if index < 0:
+            return ""
+        plans = len(layer.uniqueValues(index))
+        return f", hör till {plans} planer" if plans and plans != layer.featureCount() else ""
 
     def feature_ids(self) -> list[int] | None:
         """Selected feature ids, or None for all features."""
