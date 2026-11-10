@@ -385,7 +385,7 @@ def _decision_lines(info: Any) -> list[str]:
     force = force[0] if isinstance(force, list) and force else force
     time = f"{entry['genomforandetid']} månader" if entry.get("genomforandetid") else None
     pairs = [
-        ("Beslut", entry.get("beslutstyp")),
+        ("Beslutstyp", entry.get("beslutstyp")),
         ("Antagen", entry.get("datumAntagande")),
         ("Laga kraft", force),
         ("Genomförandetid", time),
