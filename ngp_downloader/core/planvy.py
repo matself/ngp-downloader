@@ -763,5 +763,6 @@ def _render_detail(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict
             out.append(f'<h3 style="margin-bottom:4px;">{OTHER_AT_POINT_HEADING}</h3>{other}')
 
     if detail.plan_wide:
-        out.append(f'<h3 style="margin-bottom:4px;">{PLAN_WIDE_HEADING}</h3>{_provision_table(plan_index, detail.plan_wide, colors)}')
+        table = _provision_table(plan_index, detail.plan_wide, colors)
+        out.append(f'<h3 style="margin-bottom:4px;">{PLAN_WIDE_HEADING}</h3>{table}')
     return "".join(out)
