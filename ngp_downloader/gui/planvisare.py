@@ -176,9 +176,9 @@ class PlanvisareDock(QDockWidget):
                 band.setToGeometry(QgsGeometry.collectGeometry(marks), None)
         self._render()
         for plan in self._result.plans:
-            if plan.domain is not None and plan.detail is None:
+            if plan.show_content and plan.domain is not None and plan.detail is None:
                 self._fetch_detail(plan, self._result)
-        missing_detail = any(p.detail is None for p in self._result.plans)
+        missing_detail = any(p.show_content and p.detail is None for p in self._result.plans)
         if missing_detail and not self._auth_hint_shown and not self._has_auth():
             self._auth_hint_shown = True  # once is enough
             self._message(

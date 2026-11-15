@@ -47,14 +47,17 @@ from qgis.core import (
     QgsVectorLayer,
 )
 
+from qgis.PyQt.QtCore import QDate, QDateTime
+
 from .planbestammelser import COUNT_FIELD, ORIGINAL_FIELDS, ORIGINALS_FIELD
 from .resources import MANIFEST_NAME, Resource, parse_assets
 
 TYPE_FIELD = "feature_typ"
 PLAN_ID_FIELD = "detaljplan_objektidentitet"
 PLAN_TYPE = "detaljplan"
-# Only plans in force are shown by default, like the HAJK plan viewer. The data also holds
-# plans under work (påbörjad, granskning, antagen) that are not binding yet.
+# The data also holds plans under work (påbörjad, samråd, granskning) that are not binding.
+# They are listed, but with their provisions only when asked for, so that a draft is never
+# read as what applies. Plans in force come first.
 IN_FORCE_STATUS = "laga kraft"
 # The order NGP delivers a plan document in; unknown types come last.
 USE_TYPE, PROPERTY_TYPE, ADMIN_TYPE = "användningsbestämmelse", "egenskapsbestämmelse", "administrativ bestämmelse"
@@ -127,6 +130,10 @@ class PlanInfo:
     at_point_ids: set[str] = field(default_factory=set)  # provisions that hit the clicked point
     use_at_point_ids: set[str] = field(default_factory=set)  # uses whose own area covers the point
     detail: PlanDetail | None = None  # parsed domain object, once fetched
+    in_force: bool = True  # status "laga kraft"
+    show_content: bool = True  # provisions are read; False for a plan under work unless asked for
+    started: str = ""  # datumPaborjat
+    status_date: str = ""  # datumStatusforandring
 
 
 @dataclass
@@ -136,11 +143,12 @@ class Identification:
     highlight_marks: list[QgsGeometry] = field(default_factory=list)  # lines and points hit, same CRS
     has_layers: bool = False  # any detaljplan layer in the project at all
     legacy: bool = False  # merged provisions in a GeoPackage downloaded before bestammelser_json
-    hidden_pending: int = 0  # plans at the point left out because they are not in force
 
 
 def _clean(value: Any) -> Any:
-    """NULL and other non-scalar values from the data provider become None."""
+    """NULL and other non-scalar values from the data provider become None; dates become text."""
+    if isinstance(value, (QDate, QDateTime)):
+        return value.toString("yyyy-MM-dd") if value.isValid() else None
     return value if isinstance(value, (str, int, float)) else None
 
 
@@ -308,12 +316,13 @@ def identify(
 ) -> Identification:
     """Plans and provisions at `point`, from the project's detaljplan layers.
 
-    Plans that are not in force (laga kraft) are left out unless `include_pending`;
-    how many were left out is in `hidden_pending`.
+    Plans not in force (laga kraft) are listed too, but their provisions are read only
+    with `include_pending`; without it such a plan is marked by its outline alone.
     """
     plan_layers, provision_layers = find_layers(project)
     result = Identification(has_layers=bool(plan_layers or provision_layers))
     seen_plans: set[str] = set()
+    plan_areas: dict[str, QgsGeometry] = {}
 
     for layer in plan_layers:
         for feature in _features_at(layer, _point_in(layer, point, point_crs)):
@@ -322,10 +331,12 @@ def identify(
             if not plan_id or plan_id in seen_plans:
                 continue
             seen_plans.add(plan_id)
-            if not include_pending and str(attrs.get("detaljplan_status") or "").lower() != IN_FORCE_STATUS:
-                result.hidden_pending += 1
-                continue
+            in_force = str(attrs.get("detaljplan_status") or "").lower() == IN_FORCE_STATUS
             source = layer.source().split("|")[0]
+            area = QgsGeometry(feature.geometry())
+            if layer.crs() != highlight_crs:
+                area.transform(QgsCoordinateTransform(layer.crs(), highlight_crs, QgsProject.instance()))
+            plan_areas[plan_id] = area
             result.plans.append(
                 PlanInfo(
                     plan_id=plan_id,
@@ -337,10 +348,21 @@ def identify(
                     groups=[],
                     gpkg_path=source,
                     domain=_domain_resource(attrs.get("assets")),
+                    in_force=in_force,
+                    show_content=in_force or include_pending,
+                    started=attrs.get("detaljplan_datumPaborjat") or "",
+                    status_date=attrs.get("detaljplan_datumStatusforandring") or "",
                 )
             )
 
+    # Plans in force first, then the newest first: versions of a plan are easy to compare.
+    result.plans.sort(key=lambda p: p.status_date or p.started, reverse=True)
+    result.plans.sort(key=lambda p: not p.in_force)
+
     for plan in result.plans:
+        if not plan.show_content:
+            result.highlight.append(plan_areas[plan.plan_id])  # the outline stands in for the content
+            continue
         groups: dict[str, TypeGroup] = {}
         for layer in provision_layers:
             at_point_ids = {f.id() for f in _features_at(layer, _point_in(layer, point, point_crs))}
@@ -539,8 +561,6 @@ def render_html(result: Identification, show_all: bool, colors: dict[str, str]) 
             "eller öppna ett projekt som innehåller en sådan GeoPackage.",
             colors,
         )
-    if not result.plans and result.hidden_pending:
-        return _notice(_pending_note(result.hidden_pending, "Bara"), colors)
     if not result.plans:
         return _notice(
             "Ingen detaljplan i de hämtade lagren på den klickade platsen. Det betyder inte "
@@ -558,18 +578,8 @@ def render_html(result: Identification, show_all: bool, colors: dict[str, str]) 
         ))
     for plan_index, plan in enumerate(result.plans):
         parts.append(_render_plan(plan_index, plan, show_all, colors))
-    if result.hidden_pending:
-        parts.append(_notice(_pending_note(result.hidden_pending, "Dessutom"), colors))
     parts.append("</div>")
     return "".join(parts)
-
-
-def _pending_note(count: int, lead: str) -> str:
-    plans = "en plan" if count == 1 else f"{count} planer"
-    return (
-        f"{lead} {plans} som inte vunnit laga kraft finns på platsen (påbörjad, granskning eller antagen) "
-        "och visas inte. Bocka i Visa även planer som inte vunnit laga kraft för att se dem."
-    )
 
 
 def _notice(text: str, colors: dict[str, str]) -> str:
@@ -580,8 +590,14 @@ def _notice(text: str, colors: dict[str, str]) -> str:
 
 def _render_plan(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[str, str]) -> str:
     decision = plan.status.capitalize()
-    if plan.date_in_force:
-        decision += f" ({plan.date_in_force})"
+    if plan.in_force:
+        if plan.date_in_force:
+            decision += f" ({plan.date_in_force})"
+    else:
+        stamps = (("påbörjad", plan.started), ("status ändrad", plan.status_date))
+        dates = [f"{label} {value}" for label, value in stamps if value and label != plan.status.lower()]
+        if dates:
+            decision += f" ({', '.join(dates)})"
     out = [
         f'<h2 style="margin-bottom:2px;">{_esc(plan.name)}</h2>',
         f'<table cellspacing="0" cellpadding="3"><tr>'
@@ -598,6 +614,15 @@ def _render_plan(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[s
             )
         joined = "&nbsp;&nbsp; ".join(links)
         out.append(f'<p style="color:{colors["muted"]}; margin-bottom:2px;">Länkar</p><p>{joined}</p>')
+
+    if not plan.in_force:
+        note = "Planen är under arbete och inte bindande."
+        if not plan.show_content:
+            note += " Bestämmelserna visas inte. Bocka i Visa även planer som inte vunnit laga kraft för att se dem."
+        out.append(_notice(note, colors))
+    if not plan.show_content:
+        out.append(f'<hr style="color:{colors["border"]};">')
+        return "".join(out)
 
     if plan.detail:
         out.append(_render_detail(plan_index, plan, show_all, colors))

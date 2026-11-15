@@ -134,8 +134,9 @@ sparat i ett QGIS-projekt. Dockan kan dras ut ur QGIS-fönstret, till exempel ti
 
 1. Hämta Detaljplan som vanligt. Efter hämtningen finns en knapp **Öppna Planvisare** i meddelandefältet, eller klicka på
    Planvisare-ikonen.
-2. Klicka i kartan. Bara planer som vunnit laga kraft visas; en rad anger hur många pågående planer (påbörjad, granskning, antagen)
-   som döljs. Bocka i **Visa även planer som inte vunnit laga kraft** för att se dem. Planerna på platsen visas med namn, beteckning, beslutsinformation och länkar till dokument (plankarta,
+2. Klicka i kartan. Gällande planer (laga kraft) visas först. Planer under arbete (till exempel påbörjad, samråd, granskning) visas efter dem, nyast
+   först, med status och datum och med planområdet markerat i kartan, men utan bestämmelser. Bocka i **Visa även planer som inte
+   vunnit laga kraft** för att se även deras bestämmelser, till exempel för att jämföra versioner av en plan. Planerna på platsen visas med namn, beteckning, beslutsinformation och länkar till dokument (plankarta,
    planbeskrivning med mera). Ett klick på en länk hämtar dokumentet och öppnar det.
 3. Bestämmelserna visas grupperade, med antal ("3 av 10 st": 3 gäller på platsen av 10 i planen). Bocka i **Visa alla
    bestämmelser i planen** för att se alla. Användningsytorna på platsen markeras i kartan, liksom träffade linjer och punkter.
