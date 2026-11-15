@@ -21,10 +21,21 @@ from qgis.PyQt.QtWidgets import (
 
 from ..config import PLUGIN_NAME, SETTINGS_PREFIX
 from ..core.auth import authcfg_exists
-from ..core.planvy import Identification, PlanInfo, documents_dir, identify, load_detail, render_html
+from ..core.planvy import (
+    Identification,
+    PlanInfo,
+    documents_dir,
+    identify,
+    load_detail,
+    provision_geometry,
+    render_html,
+)
 from ..core.resources import ResourceTask, is_downloadable
 
 HIGHLIGHT_COLOR = "#e64a19"
+TARGET_COLOR = "#1565c0"  # the provision picked in the text, to tell it from the click's use areas
+ZOOM_MARGIN = 1.5  # the picked area's extent is widened by this factor
+MIN_ZOOM_SPAN = 30.0  # map units (metres); keeps a point or a thin line from zooming in absurdly far
 LINK_COLOR = "#3d85c6"
 START_TEXT = "Klicka i kartan för att se vilka planbestämmelser som gäller på platsen."
 
@@ -49,6 +60,8 @@ class PlanvisareDock(QDockWidget):
         self.rubber.setStrokeColor(QColor(HIGHLIGHT_COLOR))
         self.rubber.setFillColor(QColor(0, 0, 0, 0))
         self.rubber.setWidth(3)
+        self.target_rubber = QgsRubberBand(self.canvas, Qgis.GeometryType.Polygon)
+        self._style_target()
 
         body = QWidget()
         layout = QVBoxLayout(body)
@@ -70,6 +83,14 @@ class PlanvisareDock(QDockWidget):
         self.setWidget(body)
         self._show_text(START_TEXT)
 
+    def _style_target(self) -> None:
+        color = QColor(TARGET_COLOR)
+        self.target_rubber.setStrokeColor(color)
+        self.target_rubber.setColor(color)
+        self.target_rubber.setFillColor(QColor(color.red(), color.green(), color.blue(), 60))
+        self.target_rubber.setWidth(4)
+        self.target_rubber.setIconSize(12)
+
     # --- map tool ---------------------------------------------------------
 
     def activate_tool(self) -> None:
@@ -79,6 +100,7 @@ class PlanvisareDock(QDockWidget):
         if self.canvas.mapTool() is self.tool:
             self.canvas.unsetMapTool(self.tool)
         self.rubber.reset(Qgis.GeometryType.Polygon)
+        self.target_rubber.reset(Qgis.GeometryType.Polygon)
 
     def _toggle_tool(self, checked: bool) -> None:
         if checked:
@@ -98,6 +120,12 @@ class PlanvisareDock(QDockWidget):
     def hideEvent(self, event) -> None:  # noqa: N802 — Qt override
         super().hideEvent(event)
         self.release_tool()
+        self.clear()
+
+    def clear(self) -> None:
+        """Forget the last result, so a reopened dock starts empty instead of showing stale text."""
+        self._result = None
+        self._show_text(START_TEXT)
 
     def cleanup(self) -> None:
         """Called when the plugin unloads."""
@@ -107,6 +135,7 @@ class PlanvisareDock(QDockWidget):
         except (TypeError, RuntimeError):
             pass
         self.canvas.scene().removeItem(self.rubber)
+        self.canvas.scene().removeItem(self.target_rubber)
 
     # --- result -----------------------------------------------------------
 
@@ -114,6 +143,7 @@ class PlanvisareDock(QDockWidget):
         crs = self.canvas.mapSettings().destinationCrs()
         self._result = identify(point, crs, crs)
         self.rubber.reset(Qgis.GeometryType.Polygon)
+        self.target_rubber.reset(Qgis.GeometryType.Polygon)
         if self._result.highlight:
             self.rubber.setToGeometry(QgsGeometry.collectGeometry(self._result.highlight), None)
         self._render()
@@ -178,6 +208,9 @@ class PlanvisareDock(QDockWidget):
     # --- documents --------------------------------------------------------
 
     def _on_link(self, url: QUrl) -> None:
+        if url.scheme() == "zoom":
+            self._zoom_to_provision(url)
+            return
         if url.scheme() != "doc" or self._result is None:
             return
         try:
@@ -205,6 +238,33 @@ class PlanvisareDock(QDockWidget):
         self._tasks.append(task)  # keep a reference while the task runs
         QgsApplication.taskManager().addTask(task)
         self._message(f"Hämtar {document.title}…")
+
+    def _zoom_to_provision(self, url: QUrl) -> None:
+        """Zoom the map to the area of the clicked provision and mark it."""
+        if self._result is None:
+            return
+        try:
+            index, _, ids = url.path().partition(":")
+            plan = self._result.plans[int(index)]
+        except (ValueError, IndexError):
+            return
+        crs = self.canvas.mapSettings().destinationCrs()
+        geometry = provision_geometry(plan.plan_id, ids.split(","), crs)
+        if geometry is None or geometry.isEmpty():
+            self._message("Bestämmelsens geometri hittades inte i lagren.", Qgis.MessageLevel.Warning)
+            return
+        self.target_rubber.reset(geometry.type())
+        self._style_target()
+        self.target_rubber.setToGeometry(geometry, None)
+        box = geometry.boundingBox()
+        box.scale(ZOOM_MARGIN)
+        if box.width() < MIN_ZOOM_SPAN or box.height() < MIN_ZOOM_SPAN:
+            center = box.center()
+            half = MIN_ZOOM_SPAN / 2
+            box.combineExtentWith(center.x() - half, center.y() - half)
+            box.combineExtentWith(center.x() + half, center.y() + half)
+        self.canvas.setExtent(box)
+        self.canvas.refresh()
 
     @staticmethod
     def _documents_dir(plan: PlanInfo) -> Path:

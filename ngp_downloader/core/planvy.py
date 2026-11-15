@@ -8,6 +8,20 @@ layers in the QGIS project; nothing here talks to NGP.
 The layers are those written by the plugin's detaljplan download: every feature
 carries `feature_typ` and `detaljplan_objektidentitet`, and use / property
 provisions carry `bestammelser_json` with the provisions merged into the feature.
+
+How a detaljplan is built (the plan's domain object, the item asset with role
+"detaljplan"): the use provision (användningsbestämmelse) is the base, saying what
+the land may be used for. Property provisions (egenskapsbestämmelse) lie on top:
+conditions within or across several uses, as an area, a line or a point, pointing
+through `reglerarAnvandningsbestammelse` at the uses they apply to. Administrative
+provisions (administrativ bestämmelse) apply to the whole plan (for example
+implementation time and responsibility for public spaces), carry `reglerarDetaljplan`
+and have an empty `reglerarAnvandningsbestammelse`. The domain object itself carries
+`anvandningsform`, `kategori`, `underkategori` and `bestammelsevarde` on every
+provision, so the labels below come from it and not from the Boverket catalogue.
+
+A use is "at the point" only when its own area covers the point. A property
+provision spans many uses, so it hitting the point says nothing about the others.
 """
 
 from __future__ import annotations
@@ -15,7 +29,7 @@ from __future__ import annotations
 import html
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +54,10 @@ TYPE_FIELD = "feature_typ"
 PLAN_ID_FIELD = "detaljplan_objektidentitet"
 PLAN_TYPE = "detaljplan"
 # The order NGP delivers a plan document in; unknown types come last.
-TYPE_ORDER = ("användningsbestämmelse", "egenskapsbestämmelse", "administrativ bestämmelse")
+USE_TYPE, PROPERTY_TYPE, ADMIN_TYPE = "användningsbestämmelse", "egenskapsbestämmelse", "administrativ bestämmelse"
+TYPE_ORDER = (USE_TYPE, PROPERTY_TYPE, ADMIN_TYPE)
+PLAN_WIDE_HEADING = "Gäller hela planen"
+OTHER_AT_POINT_HEADING = "Övriga bestämmelser i punkten"
 HEADINGS = {
     "användningsbestämmelse": "Användningsbestämmelser",
     "egenskapsbestämmelse": "Egenskapsbestämmelser",
@@ -48,8 +65,15 @@ HEADINGS = {
 }
 # Plan machine-readable bundle: not a document to hand to a user.
 HIDDEN_DOCUMENT_ROLES = {"detaljplan"}
-# Half-width of the search box around the clicked point, in layer units.
+# Half-width of the search box around the clicked point for areas, in layer units:
+# an area is hit only when the point is inside it.
 POINT_TOLERANCE = 0.001
+# How close (in metres) the click must be to a line or point provision to count as a hit.
+# Such a provision has no extent to click inside, so an exact hit would almost never
+# happen. A few metres is about what one can aim at in the map at plan scale.
+LINE_POINT_TOLERANCE_M = 3.0
+# Metres per degree of latitude, for layers in a geographic CRS.
+_METRES_PER_DEGREE = 111_320.0
 
 
 @dataclass(frozen=True)
@@ -82,7 +106,8 @@ class PlanDetail:
     purpose: str = ""
     decision: list[str] = field(default_factory=list)
     uses: list[UseNode] = field(default_factory=list)
-    loose: list[tuple[str, Provision]] = field(default_factory=list)  # regulate no use
+    loose: list[tuple[str, Provision]] = field(default_factory=list)  # regulate no use, not plan-wide
+    plan_wide: list[Provision] = field(default_factory=list)  # administrative: apply to the whole plan
 
 
 @dataclass
@@ -96,7 +121,8 @@ class PlanInfo:
     groups: list[TypeGroup]
     gpkg_path: str | None  # where the plan layer is stored, for saving documents next to it
     domain: Resource | None = None  # the plan's domain object, if the data offers one
-    at_point_ids: set[str] = field(default_factory=set)  # provisions that apply at the clicked point
+    at_point_ids: set[str] = field(default_factory=set)  # provisions that hit the clicked point
+    use_at_point_ids: set[str] = field(default_factory=set)  # uses whose own area covers the point
     detail: PlanDetail | None = None  # parsed domain object, once fetched
 
 
@@ -153,15 +179,22 @@ def _point_in(layer: QgsVectorLayer, point: QgsPointXY, point_crs: QgsCoordinate
 
 
 def _features_at(layer: QgsVectorLayer, point: QgsPointXY) -> list[QgsFeature]:
-    box = QgsRectangle(
-        point.x() - POINT_TOLERANCE, point.y() - POINT_TOLERANCE,
-        point.x() + POINT_TOLERANCE, point.y() + POINT_TOLERANCE,
-    )
+    """Features hit by `point`: areas exactly, lines and points within a few metres."""
     target = QgsGeometry.fromPointXY(point)
-    return [
-        f for f in layer.getFeatures(QgsFeatureRequest().setFilterRect(box))
-        if f.hasGeometry() and f.geometry().intersects(target)
-    ]
+    is_area = layer.geometryType() == Qgis.GeometryType.Polygon
+    tolerance = POINT_TOLERANCE if is_area else LINE_POINT_TOLERANCE_M
+    if not is_area and layer.crs().isGeographic():
+        tolerance /= _METRES_PER_DEGREE
+    box = QgsRectangle(
+        point.x() - tolerance, point.y() - tolerance,
+        point.x() + tolerance, point.y() + tolerance,
+    )
+    candidates = (
+        f for f in layer.getFeatures(QgsFeatureRequest().setFilterRect(box)) if f.hasGeometry()
+    )
+    if is_area:
+        return [f for f in candidates if f.geometry().intersects(target)]
+    return [f for f in candidates if f.geometry().distance(target) <= tolerance]
 
 
 def _features_of_plan(layer: QgsVectorLayer, plan_id: str) -> list[QgsFeature]:
@@ -212,6 +245,35 @@ def provisions_of(feature: QgsFeature) -> tuple[list[Provision], bool]:
             )
         )
     return provisions, legacy
+
+
+def provision_geometry(
+    plan_id: str, ids: list[str], target_crs: QgsCoordinateReferenceSystem, project: QgsProject | None = None
+) -> QgsGeometry | None:
+    """The area, line or point of the provisions with these ids, in `target_crs`; None if not found.
+
+    Looks in the plan's provision layers, where a feature stands for one or several
+    provisions (see `provisions_of`).
+    """
+    wanted = {i for i in ids if i}
+    parts = []
+    for layer in find_layers(project)[1]:
+        for feature in _features_of_plan(layer, plan_id):
+            if not feature.hasGeometry():
+                continue
+            found = {i for p in provisions_of(feature)[0] for i in _ids(p)}
+            if wanted & found:
+                geometry = QgsGeometry(feature.geometry())
+                if layer.crs() != target_crs:
+                    geometry.transform(QgsCoordinateTransform(layer.crs(), target_crs, QgsProject.instance()))
+                parts.append(geometry)
+    return QgsGeometry.collectGeometry(parts) if parts else None
+
+
+def _ids(provision: Provision) -> list[str]:
+    """The object ids behind a provision. Features merged by an older plugin version
+    hold their ids joined with " + " and no JSON, so split them to match the domain object."""
+    return [i for i in provision.id.split(" + ") if i]
 
 
 def _strip_placeholders(text: str) -> str:
@@ -281,13 +343,21 @@ def identify(
                     group.in_plan.append(provision)
                     if here:
                         group.at_point.append(provision)
-                if here and feature.hasGeometry() and feature.geometry().type() == Qgis.GeometryType.Polygon:
+                # Highlight the areas of the uses at the point. A property area often spans
+                # the whole plan and would just redraw the plan outline.
+                if (
+                    here and type_name.lower() == USE_TYPE and feature.hasGeometry()
+                    and feature.geometry().type() == Qgis.GeometryType.Polygon
+                ):
                     geometry = QgsGeometry(feature.geometry())
                     if layer.crs() != highlight_crs:
                         geometry.transform(QgsCoordinateTransform(layer.crs(), highlight_crs, QgsProject.instance()))
                     result.highlight.append(geometry)
         plan.groups = [groups[t] for t in sorted(groups, key=_type_rank)]
-        plan.at_point_ids = {p.id for g in plan.groups for p in g.at_point if p.id}
+        plan.at_point_ids = {i for g in plan.groups for p in g.at_point for i in _ids(p)}
+        plan.use_at_point_ids = {
+            i for g in plan.groups if g.type.lower() == USE_TYPE for p in g.at_point for i in _ids(p)
+        }
         plan.detail = cached_detail(plan)
     return result
 
@@ -327,8 +397,30 @@ def load_detail(path: Path | str) -> PlanDetail | None:
         return None
 
 
+def _value_text(values: Any) -> str:
+    """'min 15 procent' style text from `bestammelsevarde`, for a provision without wording."""
+    if isinstance(values, dict):
+        values = [values]
+    parts = []
+    for value in values if isinstance(values, list) else []:
+        if not isinstance(value, dict) or value.get("variabelvarde") in (None, ""):
+            continue
+        parts.append(" ".join(
+            str(v) for v in (value.get("vardetyp"), value.get("variabelvarde"), value.get("enhet")) if v
+        ))
+    return ", ".join(parts)
+
+
 def _domain_provision(props: dict[str, Any]) -> Provision:
-    text = _strip_placeholders(props.get("bestammelseformulering") or "")
+    """A provision from the domain object, which itself carries `anvandningsform`,
+    `kategori`, `underkategori` and `bestammelsevarde`.
+
+    The wording normally already contains the values; `bestammelsevarde` is the
+    fallback when the wording is empty or was only a placeholder.
+    """
+    text = _strip_placeholders(props.get("bestammelseformulering") or "") or _value_text(
+        props.get("bestammelsevarde")
+    )
     category = " · ".join(
         v
         for v in (props.get("kategori"), props.get("underkategori"))
@@ -359,7 +451,7 @@ def parse_domain(data: Any) -> PlanDetail | None:
             found_plan = True
             detail.purpose = props.get("syfte") or ""
             detail.decision = _decision_lines(props.get("beslutsinformation"))
-        elif kind == TYPE_ORDER[0]:
+        elif kind == USE_TYPE:
             node = UseNode(_domain_provision(props))
             uses[node.use.id] = node
         elif kind:
@@ -368,6 +460,9 @@ def parse_domain(data: Any) -> PlanDetail | None:
         return None
     for kind, props in regulating:
         provision = _domain_provision(props)
+        if kind == ADMIN_TYPE:  # applies to the whole plan, whatever it points at
+            _add_plan_wide(detail.plan_wide, provision)
+            continue
         targets = props.get("reglerarAnvandningsbestammelse")
         parents = [uses[t] for t in targets if t in uses] if isinstance(targets, list) else []
         for node in parents:
@@ -376,6 +471,22 @@ def parse_domain(data: Any) -> PlanDetail | None:
             detail.loose.append((kind, provision))
     detail.uses = list(uses.values())
     return detail
+
+
+def _add_plan_wide(provisions: list[Provision], provision: Provision) -> None:
+    """Add unless an identical text is there already (one wording often sits on many areas).
+
+    The ids of merged duplicates are joined onto the kept one (with " + ", like the
+    legacy merge) so that a link can still zoom to all of their areas.
+    """
+    if not provision.text:
+        return
+    for index, existing in enumerate(provisions):
+        if existing.text == provision.text:
+            if provision.id and provision.id not in _ids(existing):
+                provisions[index] = replace(existing, id=f"{existing.id} + {provision.id}".strip(" +"))
+            return
+    provisions.append(provision)
 
 
 def _decision_lines(info: Any) -> list[str]:
@@ -464,11 +575,19 @@ def _render_plan(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[s
         out.append(f'<p style="color:{colors["muted"]}; margin-bottom:2px;">Länkar</p><p>{joined}</p>')
 
     if plan.detail:
-        out.append(_render_detail(plan, show_all, colors))
+        out.append(_render_detail(plan_index, plan, show_all, colors))
         out.append(f'<hr style="color:{colors["border"]};">')
         return "".join(out)
 
     for group in plan.groups:
+        if group.type.lower() == ADMIN_TYPE:  # whole-plan provisions: merged, always shown
+            merged: list[Provision] = []
+            for provision in group.in_plan:
+                _add_plan_wide(merged, provision)
+            if merged:
+                out.append(f'<h3 style="margin-bottom:4px;">{PLAN_WIDE_HEADING}</h3>')
+                out.append(_provision_table(plan_index, merged, colors))
+            continue
         shown = group.in_plan if show_all else group.at_point
         if not shown:
             continue
@@ -485,7 +604,7 @@ def _render_plan(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[s
             lines = []
             if provision.form:
                 lines.append(f"<b>{_esc(provision.form)}</b>")
-            lines.append(_esc(provision.text))
+            lines.append(_zoom_link(plan_index, provision, _esc(provision.text), colors))
             if provision.category:
                 lines.append(f'<span style="color:{colors["muted"]};">{_esc(provision.category)}</span>')
             out.append(
@@ -496,10 +615,38 @@ def _render_plan(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[s
     return "".join(out)
 
 
-def _render_detail(plan: PlanInfo, show_all: bool, colors: dict[str, str]) -> str:
-    """Purpose, decision and the provisions nested under the use they regulate."""
+def _zoom_link(plan_index: int, provision: Provision, inner: str, colors: dict[str, str]) -> str:
+    """`inner` as a link that zooms to the provision's area, or as it is without an id."""
+    ids = _ids(provision)
+    if not ids:
+        return inner
+    return (
+        f'<a href="zoom:{plan_index}:{",".join(ids)}" style="color:{colors["text"]}; text-decoration:none;">'
+        f'{inner}</a> <span style="color:{colors["accent"]};">&#8982;</span>'
+    )
+
+
+def _provision_table(plan_index: int, provisions: list[Provision], colors: dict[str, str]) -> str:
+    """Wording and category of plain provisions, one row each; the wording zooms to the area."""
+    rows = []
+    for provision in provisions:
+        lines = [_zoom_link(plan_index, provision, _esc(provision.text), colors)]
+        if provision.category:
+            lines.append(f'<span style="color:{colors["muted"]};">{_esc(provision.category)}</span>')
+        rows.append(f'<tr><td style="border-bottom:1px solid {colors["border"]};">{"<br>".join(lines)}</td></tr>')
+    return (
+        f'<table width="100%" cellspacing="0" cellpadding="5" style="border:1px solid {colors["border"]};">'
+        + "".join(rows) + "</table>"
+    )
+
+
+def _render_detail(plan_index: int, plan: PlanInfo, show_all: bool, colors: dict[str, str]) -> str:
+    """Purpose, decision and the provisions nested under the use they regulate.
+
+    Each provision's wording is a `zoom:` link; the dock zooms the map to its area.
+    """
     detail = plan.detail
-    border, muted = colors["border"], colors["muted"]
+    muted = colors["muted"]
     out = []
     if detail.purpose:
         out.append(f'<p style="color:{muted}; margin-bottom:2px;">Syfte</p><p>{_esc(detail.purpose)}</p>')
@@ -509,42 +656,62 @@ def _render_detail(plan: PlanInfo, show_all: bool, colors: dict[str, str]) -> st
             + "<br>".join(_esc(line) for line in detail.decision)
             + "</p>"
         )
-    here = plan.at_point_ids
+    here = plan.at_point_ids  # provisions hitting the point, of any type
+    uses_here = plan.use_at_point_ids  # uses whose own area covers the point
 
-    def provision_row(provision: Provision) -> str:
-        lines = [_esc(provision.text)]
-        if provision.category:
-            lines.append(f'<span style="color:{muted};">{_esc(provision.category)}</span>')
-        return f'<tr><td style="border-bottom:1px solid {border};">{"<br>".join(lines)}</td></tr>'
-
-    def section(children: list[tuple[str, Provision]]) -> str:
+    def section(children: list[tuple[str, Provision]], only_here: bool) -> str:
+        """Provisions grouped by type; those hitting the point come first."""
         parts = []
         by_type: dict[str, list[Provision]] = {}
         for kind, provision in children:
             by_type.setdefault(kind, []).append(provision)
         for kind in sorted(by_type, key=_type_rank):
-            items = by_type[kind]
-            shown = items if show_all else [p for p in items if p.id in here]
+            items = sorted(by_type[kind], key=lambda p: p.id not in here)  # stable
+            shown = [p for p in items if p.id in here] if only_here else items
             if not shown:
                 continue
             heading = HEADINGS.get(kind, kind.capitalize())
             parts.append(
                 f'<p style="margin-bottom:2px;"><b>{_esc(heading)}</b> '
                 f'<span style="color:{muted};">{sum(p.id in here for p in items)} av {len(items)} st</span></p>'
-                f'<table width="100%" cellspacing="0" cellpadding="5" style="border:1px solid {border};">'
-                + "".join(provision_row(p) for p in shown)
-                + "</table>"
+                + _provision_table(plan_index, shown, colors)
             )
         return "".join(parts)
 
-    for node in detail.uses:
-        body = section(node.children)
-        if not show_all and node.use.id not in here and not body:
+    # A use counts as "at the point" only through its own area; a property provision
+    # that hits the point says nothing about the many uses it points at.
+    nodes = sorted(detail.uses, key=lambda n: n.use.id not in uses_here)
+    for node in nodes:
+        use_here = node.use.id in uses_here
+        if not show_all and not use_here:
             continue
-        title = " &ndash; ".join(_esc(v) for v in (node.use.form, node.use.text) if v)
+        body = section(node.children, only_here=not show_all)
+        title = _zoom_link(
+            plan_index, node.use, " &ndash; ".join(_esc(v) for v in (node.use.form, node.use.text) if v), colors
+        )
         category = f'<p style="color:{muted}; margin-top:0;">{_esc(node.use.category)}</p>' if node.use.category else ""
         out.append(f'<h3 style="margin-bottom:4px;">{title}</h3>{category}{body}')
-    other = section(detail.loose)
-    if other:
-        out.append(f'<h3 style="margin-bottom:4px;">Utan särskild användning</h3>{other}')
+
+    if show_all:
+        other = section(detail.loose, only_here=False)
+        if other:
+            out.append(f'<h3 style="margin-bottom:4px;">Utan särskild användning</h3>{other}')
+    else:
+        # Hits whose uses are all elsewhere: nowhere else to show them.
+        stray: dict[str, tuple[str, Provision]] = {}
+        for node in detail.uses:
+            if node.use.id in uses_here:
+                continue
+            for kind, provision in node.children:
+                if provision.id in here:
+                    stray.setdefault(provision.id, (kind, provision))
+        covered = {p.id for node in detail.uses if node.use.id in uses_here for _k, p in node.children}
+        stray = {i: kp for i, kp in stray.items() if i not in covered}
+        stray.update({p.id: (k, p) for k, p in detail.loose if p.id in here})
+        other = section(list(stray.values()), only_here=True)
+        if other:
+            out.append(f'<h3 style="margin-bottom:4px;">{OTHER_AT_POINT_HEADING}</h3>{other}')
+
+    if detail.plan_wide:
+        out.append(f'<h3 style="margin-bottom:4px;">{PLAN_WIDE_HEADING}</h3>{_provision_table(plan_index, detail.plan_wide, colors)}')
     return "".join(out)

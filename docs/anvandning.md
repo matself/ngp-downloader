@@ -137,12 +137,19 @@ sparat i ett QGIS-projekt. Dockan kan dras ut ur QGIS-fönstret, till exempel ti
 2. Klicka i kartan. Planerna på platsen visas med namn, beteckning, beslutsinformation och länkar till dokument (plankarta,
    planbeskrivning med mera). Ett klick på en länk hämtar dokumentet och öppnar det.
 3. Bestämmelserna visas grupperade, med antal ("3 av 10 st": 3 gäller på platsen av 10 i planen). Bocka i **Visa alla
-   bestämmelser i planen** för att se alla. Planens avgränsning markeras i kartan.
+   bestämmelser i planen** för att se alla. Användningsytorna på platsen markeras i kartan.
 
 Med en vald autentisering i NGP-panelen hämtar Planvisaren planens domänobjekt i bakgrunden (en liten fil per plan, sparad i
 `<geopackage>_resurser/`). Då visas även planens syfte och beslutsuppgifter (beslutstyp, datum, genomförandetid, diarienummer),
-och egenskaps- och administrativa bestämmelser visas under den användning de gäller för. Utan autentisering, eller om hämtningen
-misslyckas, visas en enklare vy som bygger enbart på GeoPackage-filen.
+och egenskapsbestämmelser visas under den användning de gäller för. En användning räknas som "på platsen" bara om dess egen yta
+träffar klicket. Egenskapsbestämmelser som träffar klicket men hör till användningar på andra ställen samlas under **Övriga
+bestämmelser i punkten**. Egenskapslinjer och -punkter träffas inom 3 meter från klicket, ytor måste träffas exakt.
+Administrativa bestämmelser gäller hela planen, till exempel genomförandetid, och visas alltid under **Gäller hela planen**
+(identiska texter slås ihop). Utan autentisering, eller om hämtningen misslyckas, visas en enklare vy som bygger enbart på
+GeoPackage-filen.
+
+Klicka på en bestämmelses text (markerad med ⌖) för att zooma kartan till dess område, som ritas med blå kontur. Det fungerar
+för ytor, linjer och punkter.
 
 ## 6. Hämta resurser i bulk (dokument och domänobjekt)
 
