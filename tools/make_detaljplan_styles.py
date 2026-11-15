@@ -19,6 +19,7 @@ from qgis.core import (
     QgsFillSymbol,
     QgsLineSymbol,
     QgsMarkerLineSymbolLayer,
+    QgsSimpleMarkerSymbolLayer,
     QgsMarkerSymbol,
     QgsPointPatternFillSymbolLayer,
     QgsPalLayerSettings,
@@ -91,14 +92,58 @@ def egenskapsgrans(colour: str = INK) -> QgsLineSymbol:  # — ·· — ··
     })
 
 
-def utfartsforbud() -> QgsLineSymbol:  # ○○○○ a chain of rings on a thin line, like Lantmäteriets map
-    symbol = QgsLineSymbol.createSimple({"line_color": INK, "line_width": "0.25"})
-    ring = QgsMarkerSymbol.createSimple({"name": "circle", "color": "255,255,255,255", "outline_color": INK,
-                                         "outline_width": "0.3", "size": "1.5"})
-    marks = QgsMarkerLineSymbolLayer()
-    marks.setSubSymbol(ring)
-    marks.setInterval(2.0)
-    symbol.appendSymbolLayer(marks)
+# Utfartsförbud (BFS 2020:6): rings and end symbols are the same size, in mm.
+UTFART_SIZE = 2.4
+UTFART_STROKE = 0.4
+# Dash pattern, mm: stub, gap for a ring, stub, gap, dash, gap. The ring sits in the wide gap.
+UTFART_STUB, UTFART_GAP, UTFART_DASH = 1.0, 1.2, 1.2
+UTFART_PERIOD = 2 * UTFART_STUB + UTFART_SIZE + 2 * UTFART_GAP + UTFART_DASH
+
+
+def _end_cap(angle: float) -> QgsMarkerSymbol:
+    """Half circle with a transverse bar on its flat side, bulging along the line."""
+    half = QgsSimpleMarkerSymbolLayer(Qgis.MarkerShape.SemiCircle, UTFART_SIZE)
+    half.setColor(QColor(0, 0, 0, 0))
+    half.setStrokeColor(QColor(INK))
+    half.setStrokeWidth(UTFART_STROKE)
+    half.setAngle(angle)
+    bar = QgsSimpleMarkerSymbolLayer(Qgis.MarkerShape.Line, UTFART_SIZE)
+    bar.setColor(QColor(INK))
+    bar.setStrokeColor(QColor(INK))
+    bar.setStrokeWidth(UTFART_STROKE)
+    cap = QgsMarkerSymbol()
+    cap.changeSymbolLayer(0, half)
+    cap.appendSymbolLayer(bar)
+    return cap
+
+
+def utfartsforbud() -> QgsLineSymbol:  # |D-o- - -o- - -o-C|  as Boverket draws it
+    """Dashed line with transparent rings, and a half circle with a transverse bar at each end.
+
+    The pattern starts with the dash, so the first ring comes a little after the end cap.
+    The line is broken where a ring sits, so that it does not run through the ring.
+    """
+    pattern = (UTFART_STUB, UTFART_SIZE, UTFART_STUB, UTFART_GAP, UTFART_DASH, UTFART_GAP)
+    to_dash = 2 * UTFART_STUB + UTFART_SIZE + UTFART_GAP  # where the lone dash starts in the pattern
+    ring_centre = UTFART_STUB + UTFART_SIZE / 2  # in the pattern
+    symbol = QgsLineSymbol.createSimple({
+        "line_color": INK, "line_width": str(UTFART_STROKE), "capstyle": "flat",
+        "use_custom_dash": "1", "customdash": ";".join(f"{v:g}" for v in pattern), "customdash_unit": "MM",
+        "dash_pattern_offset": f"{to_dash:g}",
+    })
+    ring = QgsMarkerSymbol.createSimple({"name": "circle", "color": "0,0,0,0", "outline_color": INK,
+                                         "outline_width": str(UTFART_STROKE), "size": str(UTFART_SIZE)})
+    rings = QgsMarkerLineSymbolLayer()
+    rings.setSubSymbol(ring)
+    rings.setInterval(UTFART_PERIOD)
+    rings.setOffsetAlongLine(ring_centre - to_dash + UTFART_PERIOD)
+    symbol.appendSymbolLayer(rings)
+    # Both caps bulge inwards along the line: 90 degrees at its start, 270 at its end.
+    for placement, angle in ((Qgis.MarkerLinePlacement.FirstVertex, 90), (Qgis.MarkerLinePlacement.LastVertex, 270)):
+        caps = QgsMarkerLineSymbolLayer()
+        caps.setSubSymbol(_end_cap(angle))
+        caps.setPlacement(placement)
+        symbol.appendSymbolLayer(caps)
     return symbol
 
 
