@@ -18,6 +18,7 @@ from qgis.core import (
     QgsApplication,
     QgsFillSymbol,
     QgsLineSymbol,
+    QgsMarkerLineSymbolLayer,
     QgsMarkerSymbol,
     QgsPointPatternFillSymbolLayer,
     QgsPalLayerSettings,
@@ -88,6 +89,17 @@ def egenskapsgrans(colour: str = INK) -> QgsLineSymbol:  # — ·· — ··
         "line_color": colour, "line_width": "0.35", "capstyle": "flat",
         "use_custom_dash": "1", "customdash": "3.4;0.8;0.35;0.6;0.35;0.8", "customdash_unit": "MM",
     })
+
+
+def utfartsforbud() -> QgsLineSymbol:  # ○○○○ a chain of rings on a thin line, like Lantmäteriets map
+    symbol = QgsLineSymbol.createSimple({"line_color": INK, "line_width": "0.25"})
+    ring = QgsMarkerSymbol.createSimple({"name": "circle", "color": "255,255,255,255", "outline_color": INK,
+                                         "outline_width": "0.3", "size": "1.5"})
+    marks = QgsMarkerLineSymbolLayer()
+    marks.setSubSymbol(ring)
+    marks.setInterval(2.0)
+    symbol.appendSymbolLayer(marks)
+    return symbol
 
 
 def outline_only(line: QgsLineSymbol) -> QgsFillSymbol:
@@ -227,7 +239,11 @@ def main() -> None:
     # Merged properties ('b e f m nh 9 p') wrap into short lines to fit the area.
     save("MultiPolygon", "detaljplan_egenskap_yta", QgsRuleBasedRenderer(props),
          label_settings(beteckning, LABEL_PROPERTY, 5000, italic=True, autoWrapLength=7, **inside))
-    save("MultiLineString", "detaljplan_egenskap_linje", QgsSingleSymbolRenderer(egenskapsgrans()),
+    lines = QgsRuleBasedRenderer.Rule(None)
+    lines.appendChild(QgsRuleBasedRenderer.Rule(
+        utfartsforbud(), 0, 0, "\"planbestammelse_symbol\" LIKE 'Utfart får inte finnas%'", "Utfartsförbud"))
+    lines.appendChild(QgsRuleBasedRenderer.Rule(egenskapsgrans(), 0, 0, "ELSE", "Egenskapsgräns"))
+    save("MultiLineString", "detaljplan_egenskap_linje", QgsRuleBasedRenderer(lines),
          label_settings(beteckning, LABEL_PROPERTY, 5000, italic=True))
     save("MultiPoint", "detaljplan_egenskap_punkt",
          QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple(
