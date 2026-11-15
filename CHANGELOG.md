@@ -6,6 +6,7 @@ All notable changes to Geodata: NGP (Lantmäteriet) are documented in this file.
 - New tool **Planvisare** (plan viewer): a detachable dock with its own toolbar icon that shows plan content from downloaded detaljplan layers at a clicked point, similar to Lantmäteriet's plan viewer; fetches the plan's domain object (with an authentication) to show purpose, decision details and provisions nested under their use
 - Planvisare: a use is "at the point" only when its own area covers the point; other provisions hitting the point are listed under "Övriga bestämmelser i punkten"; administrative provisions are shown under "Gäller hela planen" with identical wordings merged; line and point provisions are hit within 3 m of the click
 - Detaljplan: utfartsförbud lines are drawn as a chain of rings on a thin line, like Lantmäteriets map; other property lines keep the property boundary style
+- Planvisare: only plans in force (laga kraft) are shown by default, like HAJK; a checkbox shows plans under work too
 - Planvisare: click a provision's wording to zoom the map to its area (outlined in blue)
 - Merged provisions keep their originals as JSON in `bestammelser_json`
 - Layer groups are named "Detaljplaner <area> <date>" with short layer names, collapsed in the layer tree; the administrative layer is visible by default

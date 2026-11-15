@@ -134,10 +134,11 @@ sparat i ett QGIS-projekt. Dockan kan dras ut ur QGIS-fönstret, till exempel ti
 
 1. Hämta Detaljplan som vanligt. Efter hämtningen finns en knapp **Öppna Planvisare** i meddelandefältet, eller klicka på
    Planvisare-ikonen.
-2. Klicka i kartan. Planerna på platsen visas med namn, beteckning, beslutsinformation och länkar till dokument (plankarta,
+2. Klicka i kartan. Bara planer som vunnit laga kraft visas; en rad anger hur många pågående planer (påbörjad, granskning, antagen)
+   som döljs. Bocka i **Visa även planer som inte vunnit laga kraft** för att se dem. Planerna på platsen visas med namn, beteckning, beslutsinformation och länkar till dokument (plankarta,
    planbeskrivning med mera). Ett klick på en länk hämtar dokumentet och öppnar det.
 3. Bestämmelserna visas grupperade, med antal ("3 av 10 st": 3 gäller på platsen av 10 i planen). Bocka i **Visa alla
-   bestämmelser i planen** för att se alla. Användningsytorna på platsen markeras i kartan.
+   bestämmelser i planen** för att se alla. Användningsytorna på platsen markeras i kartan, liksom träffade linjer och punkter.
 
 Med en vald autentisering i NGP-panelen hämtar Planvisaren planens domänobjekt i bakgrunden (en liten fil per plan, sparad i
 `<geopackage>_resurser/`). Då visas även planens syfte och beslutsuppgifter (beslutstyp, datum, genomförandetid, diarienummer),

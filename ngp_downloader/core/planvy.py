@@ -53,6 +53,9 @@ from .resources import MANIFEST_NAME, Resource, parse_assets
 TYPE_FIELD = "feature_typ"
 PLAN_ID_FIELD = "detaljplan_objektidentitet"
 PLAN_TYPE = "detaljplan"
+# Only plans in force are shown by default, like the HAJK plan viewer. The data also holds
+# plans under work (påbörjad, granskning, antagen) that are not binding yet.
+IN_FORCE_STATUS = "laga kraft"
 # The order NGP delivers a plan document in; unknown types come last.
 USE_TYPE, PROPERTY_TYPE, ADMIN_TYPE = "användningsbestämmelse", "egenskapsbestämmelse", "administrativ bestämmelse"
 TYPE_ORDER = (USE_TYPE, PROPERTY_TYPE, ADMIN_TYPE)
@@ -129,9 +132,11 @@ class PlanInfo:
 @dataclass
 class Identification:
     plans: list[PlanInfo] = field(default_factory=list)
-    highlight: list[QgsGeometry] = field(default_factory=list)  # polygons, in the requested CRS
+    highlight: list[QgsGeometry] = field(default_factory=list)  # use areas at the point, in the requested CRS
+    highlight_marks: list[QgsGeometry] = field(default_factory=list)  # lines and points hit, same CRS
     has_layers: bool = False  # any detaljplan layer in the project at all
     legacy: bool = False  # merged provisions in a GeoPackage downloaded before bestammelser_json
+    hidden_pending: int = 0  # plans at the point left out because they are not in force
 
 
 def _clean(value: Any) -> Any:
@@ -299,8 +304,13 @@ def identify(
     point_crs: QgsCoordinateReferenceSystem,
     highlight_crs: QgsCoordinateReferenceSystem,
     project: QgsProject | None = None,
+    include_pending: bool = False,
 ) -> Identification:
-    """Plans and provisions at `point`, from the project's detaljplan layers."""
+    """Plans and provisions at `point`, from the project's detaljplan layers.
+
+    Plans that are not in force (laga kraft) are left out unless `include_pending`;
+    how many were left out is in `hidden_pending`.
+    """
     plan_layers, provision_layers = find_layers(project)
     result = Identification(has_layers=bool(plan_layers or provision_layers))
     seen_plans: set[str] = set()
@@ -312,6 +322,9 @@ def identify(
             if not plan_id or plan_id in seen_plans:
                 continue
             seen_plans.add(plan_id)
+            if not include_pending and str(attrs.get("detaljplan_status") or "").lower() != IN_FORCE_STATUS:
+                result.hidden_pending += 1
+                continue
             source = layer.source().split("|")[0]
             result.plans.append(
                 PlanInfo(
@@ -345,14 +358,14 @@ def identify(
                         group.at_point.append(provision)
                 # Highlight the areas of the uses at the point. A property area often spans
                 # the whole plan and would just redraw the plan outline.
-                if (
-                    here and type_name.lower() == USE_TYPE and feature.hasGeometry()
-                    and feature.geometry().type() == Qgis.GeometryType.Polygon
-                ):
+                # Lines and points that are hit are marked too: they are easy to miss otherwise.
+                is_use_area = type_name.lower() == USE_TYPE and layer.geometryType() == Qgis.GeometryType.Polygon
+                is_mark = layer.geometryType() in (Qgis.GeometryType.Line, Qgis.GeometryType.Point)
+                if here and feature.hasGeometry() and (is_use_area or is_mark):
                     geometry = QgsGeometry(feature.geometry())
                     if layer.crs() != highlight_crs:
                         geometry.transform(QgsCoordinateTransform(layer.crs(), highlight_crs, QgsProject.instance()))
-                    result.highlight.append(geometry)
+                    (result.highlight if is_use_area else result.highlight_marks).append(geometry)
         plan.groups = [groups[t] for t in sorted(groups, key=_type_rank)]
         plan.at_point_ids = {i for g in plan.groups for p in g.at_point for i in _ids(p)}
         plan.use_at_point_ids = {
@@ -526,6 +539,8 @@ def render_html(result: Identification, show_all: bool, colors: dict[str, str]) 
             "eller öppna ett projekt som innehåller en sådan GeoPackage.",
             colors,
         )
+    if not result.plans and result.hidden_pending:
+        return _notice(_pending_note(result.hidden_pending, "Bara"), colors)
     if not result.plans:
         return _notice(
             "Ingen detaljplan i de hämtade lagren på den klickade platsen. Det betyder inte "
@@ -543,8 +558,18 @@ def render_html(result: Identification, show_all: bool, colors: dict[str, str]) 
         ))
     for plan_index, plan in enumerate(result.plans):
         parts.append(_render_plan(plan_index, plan, show_all, colors))
+    if result.hidden_pending:
+        parts.append(_notice(_pending_note(result.hidden_pending, "Dessutom"), colors))
     parts.append("</div>")
     return "".join(parts)
+
+
+def _pending_note(count: int, lead: str) -> str:
+    plans = "en plan" if count == 1 else f"{count} planer"
+    return (
+        f"{lead} {plans} som inte vunnit laga kraft finns på platsen (påbörjad, granskning eller antagen) "
+        "och visas inte. Bocka i Visa även planer som inte vunnit laga kraft för att se dem."
+    )
 
 
 def _notice(text: str, colors: dict[str, str]) -> str:

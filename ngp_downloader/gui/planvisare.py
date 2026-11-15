@@ -49,6 +49,7 @@ class PlanvisareDock(QDockWidget):
         self.iface = iface
         self.canvas = iface.mapCanvas()
         self._result: Identification | None = None
+        self._last_click: tuple | None = None  # (point, crs) of the latest click, to redo it
         self._tasks: list[ResourceTask] = []
         self._auth_hint_shown = False
 
@@ -60,6 +61,14 @@ class PlanvisareDock(QDockWidget):
         self.rubber.setStrokeColor(QColor(HIGHLIGHT_COLOR))
         self.rubber.setFillColor(QColor(0, 0, 0, 0))
         self.rubber.setWidth(3)
+        # Lines and points hit by the click, marked in the same colour as the use areas.
+        self.mark_rubbers = {}
+        for kind in (Qgis.GeometryType.Line, Qgis.GeometryType.Point):
+            band = QgsRubberBand(self.canvas, kind)
+            band.setColor(QColor(HIGHLIGHT_COLOR))
+            band.setWidth(4)
+            band.setIconSize(12)
+            self.mark_rubbers[kind] = band
         self.target_rubber = QgsRubberBand(self.canvas, Qgis.GeometryType.Polygon)
         self._style_target()
 
@@ -73,8 +82,11 @@ class PlanvisareDock(QDockWidget):
         self.show_all = QCheckBox("Visa alla bestämmelser i planen")
         self.show_all.toggled.connect(self._render)
         top.addWidget(self.show_all)
+        self.show_pending = QCheckBox("Visa även planer som inte vunnit laga kraft")
+        self.show_pending.toggled.connect(self._redo_click)
         top.addStretch()
         layout.addLayout(top)
+        layout.addWidget(self.show_pending)  # own row: the labels are long for a narrow dock
 
         self.browser = QTextBrowser()
         self.browser.setOpenLinks(False)
@@ -82,6 +94,12 @@ class PlanvisareDock(QDockWidget):
         layout.addWidget(self.browser)
         self.setWidget(body)
         self._show_text(START_TEXT)
+
+    def _reset_highlights(self) -> None:
+        self.rubber.reset(Qgis.GeometryType.Polygon)
+        self.target_rubber.reset(Qgis.GeometryType.Polygon)
+        for kind, band in self.mark_rubbers.items():
+            band.reset(kind)
 
     def _style_target(self) -> None:
         color = QColor(TARGET_COLOR)
@@ -99,8 +117,7 @@ class PlanvisareDock(QDockWidget):
     def release_tool(self) -> None:
         if self.canvas.mapTool() is self.tool:
             self.canvas.unsetMapTool(self.tool)
-        self.rubber.reset(Qgis.GeometryType.Polygon)
-        self.target_rubber.reset(Qgis.GeometryType.Polygon)
+        self._reset_highlights()
 
     def _toggle_tool(self, checked: bool) -> None:
         if checked:
@@ -125,6 +142,7 @@ class PlanvisareDock(QDockWidget):
     def clear(self) -> None:
         """Forget the last result, so a reopened dock starts empty instead of showing stale text."""
         self._result = None
+        self._last_click = None
         self._show_text(START_TEXT)
 
     def cleanup(self) -> None:
@@ -136,16 +154,26 @@ class PlanvisareDock(QDockWidget):
             pass
         self.canvas.scene().removeItem(self.rubber)
         self.canvas.scene().removeItem(self.target_rubber)
+        for band in self.mark_rubbers.values():
+            self.canvas.scene().removeItem(band)
 
     # --- result -----------------------------------------------------------
 
-    def _on_click(self, point, _button) -> None:
+    def _redo_click(self, *_args) -> None:
+        if self._last_click is not None:
+            self._on_click(*self._last_click)
+
+    def _on_click(self, point, _button=None) -> None:
         crs = self.canvas.mapSettings().destinationCrs()
-        self._result = identify(point, crs, crs)
-        self.rubber.reset(Qgis.GeometryType.Polygon)
-        self.target_rubber.reset(Qgis.GeometryType.Polygon)
+        self._last_click = (point, None)
+        self._result = identify(point, crs, crs, include_pending=self.show_pending.isChecked())
+        self._reset_highlights()
         if self._result.highlight:
             self.rubber.setToGeometry(QgsGeometry.collectGeometry(self._result.highlight), None)
+        for kind, band in self.mark_rubbers.items():
+            marks = [g for g in self._result.highlight_marks if g.type() == kind]
+            if marks:
+                band.setToGeometry(QgsGeometry.collectGeometry(marks), None)
         self._render()
         for plan in self._result.plans:
             if plan.domain is not None and plan.detail is None:
