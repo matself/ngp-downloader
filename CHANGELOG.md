@@ -2,7 +2,7 @@
 
 All notable changes to Geodata: NGP (Lantmäteriet) are documented in this file.
 
-## [Unreleased]
+## [1.1.0]
 - New tool **Planvisare** (plan viewer): a detachable dock with its own toolbar icon that shows plan content from downloaded detaljplan layers at a clicked point, similar to Lantmäteriet's plan viewer; fetches the plan's domain object (with an authentication) to show purpose, decision details and provisions nested under their use
 - Planvisare: a use is "at the point" only when its own area covers the point; other provisions hitting the point are listed under "Övriga bestämmelser i punkten"; administrative provisions are shown under "Gäller hela planen" with identical wordings merged; line and point provisions are hit within 3 m of the click
 - Detaljplan: utfartsförbud lines are drawn as in Boverkets symbol (BFS 2020:6): a dashed line with transparent rings, and a half circle with a transverse bar at each end; other property lines keep the property boundary style
